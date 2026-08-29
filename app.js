@@ -1,5 +1,12 @@
 const KEY='sj_connect_data_v1';
 const seed={customers:[{id:'C001',name:'Demo Customer',phone:'919876543210',shop:'Demo Jewellery',city:'Coimbatore',notes:'Sample record',created:'2026-08-27'}],orders:[],exhibitions:[],reviews:[],messages:[]};
+function customerName(c){
+  return c?.partyName || c?.name || 'Customer';
+}
+
+function contactName(c){
+  return c?.contactPerson || '';
+}
 let data=JSON.parse(localStorage.getItem(KEY)||'null')||seed;let view='dashboard';let selectedCustomer=null;
 const $=s=>document.querySelector(s);const $$=s=>[...document.querySelectorAll(s)];
 function save(){localStorage.setItem(KEY,JSON.stringify(data));}
@@ -37,25 +44,82 @@ function settings(){return `<div class="page-head"><div><div class="eyebrow">Adm
 function setView(v){view=v;$('#sidebar').classList.remove('open');layout()}
 function openModal(title,html){$('#modalTitle').textContent=title;$('#modalBody').innerHTML=html;$('#modal').classList.remove('hidden')}
 function closeModal(){$('#modal').classList.add('hidden')}
-function openCustomer(existing){const c=existing||{};openModal(existing?'Edit Customer':'Add Customer',`<div class="form-grid"><div class="field"><label>Name *</label><input class="input" id="fName" value="${esc(c.name||'')}"></div><div class="field"><label>WhatsApp Number *</label><input class="input" id="fPhone" inputmode="tel" value="${esc(c.phone||'')}"></div><div class="field"><label>Shop / Company</label><input class="input" id="fShop" value="${esc(c.shop||'')}"></div><div class="field"><label>City</label><input class="input" id="fCity" value="${esc(c.city||'')}"></div><div class="field full"><label>Notes</label><textarea class="textarea" id="fNotes">${esc(c.notes||'')}</textarea></div></div><div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveCustomer('${c.id||''}')">Save Customer</button></div>`)}
-function saveCustomer(id){const name=$('#fName').value.trim(),phone=$('#fPhone').value.trim();if(!name||!phone)return toast('Name and WhatsApp number are required');const obj={id:id||'C'+Date.now().toString().slice(-7),name,phone,shop:$('#fShop').value.trim(),city:$('#fCity').value.trim(),notes:$('#fNotes').value.trim(),created:dateNow()};if(id){const i=data.customers.findIndex(c=>c.id===id);data.customers[i]=obj}else data.customers.push(obj);save();closeModal();layout();toast(id?'Customer updated':'Customer added successfully')}
-function deleteCustomer(id){if(!confirm('Delete this customer?'))return;data.customers=data.customers.filter(c=>c.id!==id);data.orders=data.orders.filter(o=>o.customerId!==id);save();layout();toast('Customer deleted')}
-function viewCustomer(id){const c=customer(id);const os=data.orders.filter(o=>o.customerId===id);openModal(c.name,`<div class="grid two"><div class="card"><div class="section-title">Customer Details</div><p><b>WhatsApp:</b> ${esc(c.phone)}</p><p><b>Shop:</b> ${esc(c.shop||'-')}</p><p><b>City:</b> ${esc(c.city||'-')}</p><p><b>Notes:</b> ${esc(c.notes||'-')}</p><div class="actions"><button class="btn whatsapp" onclick="quickWhatsApp('${id}')">💬 WhatsApp</button><button class="btn" onclick="openCustomer(customer('${id}'));closeModal()">Edit</button></div></div><div class="card"><div class="section-title">📜 Customer Timeline</div><div class="timeline">${os.map(o=>`<div class="event"><b>${esc(o.status)}</b><div class="row-sub">Order ${esc(o.orderNo)} • ${esc(o.item||'')}</div><small>${esc(o.startDate||o.orderDate||'-')}</small></div>`).join('')||'<div class="muted">No orders yet.</div>'}</div></div></div>`)}
-function quickWhatsApp(id){const c=customer(id);wa(c.phone,msgFor('Follow-up',c));data.messages.push({customerId:id,type:'Follow-up',date:dateNow()});save();toast('WhatsApp opened')}
-function openWhatsAppTemplate(type){const opts=data.customers.map(c=>`<option value="${c.id}">${esc(c.name)} — ${esc(c.phone)}</option>`).join('');openModal(type,`<div class="field"><label>Customer</label><select class="select" id="waCustomer">${opts||'<option>No customers</option>'}</select></div><div class="field" style="margin-top:12px"><label>Message Preview</label><textarea class="textarea" id="waPreview" rows="12"></textarea></div><div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="sendTemplate('${esc(type)}')">💬 Open WhatsApp</button></div>`);const s=$('#waCustomer');const update=()=>{const c=customer(s.value);$('#waPreview').value=msgFor(type,c)};s.onchange=update;update()}
-function sendTemplate(type){const c=customer($('#waCustomer').value);if(!c)return;wa(c.phone,$('#waPreview').value);data.messages.push({customerId:c.id,type,date:dateNow()});save();closeModal()}
-function openOrder(existing){const o=existing||{};const opts=data.customers.map(c=>`<option value="${c.id}" ${c.id===o.customerId?'selected':''}>${esc(c.name)} — ${esc(c.phone)}</option>`).join('');openModal(existing?'Edit Order':'New Order',`<div class="form-grid"><div class="field"><label>Customer *</label><select class="select" id="oCustomer">${opts||'<option value="">Add customer first</option>'}</select></div><div class="field"><label>Order Number</label><input class="input" id="oNo" value="${esc(o.orderNo||'SJ-'+new Date().getFullYear()+'-'+String(data.orders.length+1).padStart(4,'0'))}"></div><div class="field full"><label>Item / Description</label><input class="input" id="oItem" value="${esc(o.item||'')}"></div><div class="field"><label>Order Date</label><input class="input" type="date" id="oDate" value="${esc(o.orderDate||dateNow())}"></div><div class="field"><label>Start Date</label><input class="input" type="date" id="oStart" value="${esc(o.startDate||'')}"></div><div class="field"><label>Expected Finish</label><input class="input" type="date" id="oExpected" value="${esc(o.expectedFinish||'')}"></div><div class="field"><label>Actual Finish</label><input class="input" type="date" id="oFinish" value="${esc(o.finishDate||'')}"></div><div class="field"><label>Delivery Date</label><input class="input" type="date" id="oDelivery" value="${esc(o.deliveryDate||'')}"></div><div class="field"><label>Status</label><select class="select" id="oStatus">${['New','Started','Production','Completed','Hallmarking','Ready','Delivered','Cancelled'].map(s=>`<option ${s===(o.status||'New')?'selected':''}>${s}</option>`).join('')}</select></div><div class="field"><label>Order Value (₹)</label><input class="input" type="number" id="oValue" value="${esc(o.value||'')}"></div><div class="field"><label>Advance (₹)</label><input class="input" type="number" id="oAdvance" value="${esc(o.advance||'')}"></div><div class="field"><label>Gold Weight</label><input class="input" id="oWeight" value="${esc(o.weight||'')}"></div><div class="field"><label>Gold Touch</label><input class="input" id="oTouch" value="${esc(o.touch||'')}"></div><div class="field"><label>Screw Type</label><input class="input" id="oScrew" value="${esc(o.screw||'')}"></div><div class="field full"><label>Notes</label><textarea class="textarea" id="oNotes">${esc(o.notes||'')}</textarea></div></div><div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveOrder('${o.id||''}')">Save Order</button></div>`)}
-function saveOrder(id){const customerId=$('#oCustomer').value;if(!customerId)return toast('Select a customer');const obj={id:id||'O'+Date.now(),customerId,orderNo:$('#oNo').value.trim(),item:$('#oItem').value.trim(),orderDate:$('#oDate').value,startDate:$('#oStart').value,expectedFinish:$('#oExpected').value,finishDate:$('#oFinish').value,deliveryDate:$('#oDelivery').value,status:$('#oStatus').value,value:Number($('#oValue').value||0),advance:Number($('#oAdvance').value||0),weight:$('#oWeight').value,touch:$('#oTouch').value,screw:$('#oScrew').value,notes:$('#oNotes').value.trim()};if(id){const i=data.orders.findIndex(o=>o.id===id);data.orders[i]=obj}else data.orders.push(obj);save();closeModal();layout();toast(id?'Order updated':'Order created')}
-function editOrder(id){openOrder(data.orders.find(o=>o.id===id))}
-function orderWhatsApp(id){const o=data.orders.find(o=>o.id===id),c=customer(o.customerId);const type=o.status==='Started'||o.status==='Production'?'Order Started':o.status==='Completed'?'Order Completed':o.status==='Ready'?'Ready for Delivery':o.status==='Delivered'?'Delivery Update':'Order Thank You';wa(c.phone,msgFor(type,c,o));data.messages.push({customerId:c.id,type,date:dateNow(),orderId:id});save();toast('WhatsApp opened')}
-function openExhibition(existing){const e=existing||{};openModal(existing?'Edit Exhibition':'New Exhibition',`<div class="form-grid"><div class="field"><label>Exhibition Name *</label><input class="input" id="eName" value="${esc(e.name||'')}"></div><div class="field"><label>Date</label><input class="input" type="date" id="eDate" value="${esc(e.date||'')}"></div><div class="field full"><label>Venue</label><input class="input" id="eVenue" value="${esc(e.venue||'')}"></div></div><div class="modal-actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveExhibition('${e.id||''}')">Save Exhibition</button></div>`)}
-function saveExhibition(id){const name=$('#eName').value.trim();if(!name)return toast('Exhibition name is required');const obj={id:id||'E'+Date.now(),name,date:$('#eDate').value,venue:$('#eVenue').value.trim()};if(id)data.exhibitions[data.exhibitions.findIndex(e=>e.id===id)]=obj;else data.exhibitions.push(obj);save();closeModal();layout();toast('Exhibition saved')}
-function inviteCampaign(id){const e=data.exhibitions.find(x=>x.id===id);openModal('Exhibition Invite',`<div class="field"><label>Select Customer</label><select class="select" id="campCustomer">${data.customers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div><div class="field" style="margin-top:12px"><label>Message</label><textarea class="textarea" id="campMsg" rows="9"></textarea></div><div class="modal-actions"><button class="btn primary" onclick="sendCampaign('${id}')">🎪 Open WhatsApp</button></div>`);const s=$('#campCustomer');const up=()=>{const c=customer(s.value);$('#campMsg').value=`Dear ${c.name},\n\nWe are pleased to invite you to ${e.name}${e.venue?' at '+e.venue:''}${e.date?' on '+e.date:''}. 🎪\n\nWe would be delighted to meet you.\n\nRegards,\nSHREE JI GOLD CREATOR LLP`};s.onchange=up;up()}
-function sendCampaign(id){const c=customer($('#campCustomer').value);wa(c.phone,$('#campMsg').value);data.messages.push({customerId:c.id,type:'Exhibition Invitation',exhibitionId:id,date:dateNow()});save();closeModal()}
-function markExhibitionVisit(id){toast('Visit tracking is ready — connect each visitor to a customer from the next version.')}
-function filterCustomers(){const q=$('#customerSearch').value.toLowerCase();$('#customerRows').innerHTML=customerRows(data.customers.filter(c=>[c.name,c.phone,c.shop,c.city].join(' ').toLowerCase().includes(q)))}
-function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='shree-ji-connect-backup-'+dateNow()+'.json';a.click();URL.revokeObjectURL(a.href);toast('Backup exported')}
-function importData(){const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=()=>{const f=i.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{data=JSON.parse(r.result);save();layout();toast('Backup imported')}catch{toast('Invalid backup file')}};r.readAsText(f)};i.click()}
-function resetDemo(){if(confirm('Reset all app data to demo data?')){data=JSON.parse(JSON.stringify(seed));save();layout();toast('Demo data restored')}}
-$('#modalClose').onclick=closeModal;$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});$('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open');document.addEventListener('click',e=>{const b=e.target.closest('.nav-item');if(b)setView(b.dataset.view)});$('#notifyBtn').onclick=()=>toast('No urgent notifications');
-layout();
+function openCustomer(existing){
+  const c=existing||{};
+
+  openModal(existing?'Edit Customer':'Add Customer',`
+    <div class="form-grid">
+
+      <div class="field full">
+        <label>Party Name *</label>
+        <input class="input" id="fPartyName"
+          placeholder="Company / Jewellery Shop Name"
+          value="${esc(c.partyName||c.shop||c.name||'')}">
+      </div>
+
+      <div class="field">
+        <label>Contact Person</label>
+        <input class="input" id="fContactPerson"
+          placeholder="Contact Person Name"
+          value="${esc(c.contactPerson||'')}">
+      </div>
+
+      <div class="field">
+        <label>WhatsApp Number *</label>
+        <input class="input" id="fPhone"
+          inputmode="tel"
+          placeholder="WhatsApp Number"
+          value="${esc(c.phone||'')}">
+      </div>
+
+      <div class="field">
+        <label>Alternate Number</label>
+        <input class="input" id="fAlternate"
+          inputmode="tel"
+          placeholder="Alternate Number"
+          value="${esc(c.alternate||'')}">
+      </div>
+
+      <div class="field">
+        <label>City</label>
+        <input class="input" id="fCity"
+          placeholder="City"
+          value="${esc(c.city||'')}">
+      </div>
+
+      <div class="field full">
+        <label>Address</label>
+        <textarea class="textarea" id="fAddress"
+          placeholder="Full Address">${esc(c.address||'')}</textarea>
+      </div>
+
+      <div class="field">
+        <label>State</label>
+        <input class="input" id="fState"
+          value="${esc(c.state||'Tamil Nadu')}">
+      </div>
+
+      <div class="field">
+        <label>Exhibition</label>
+        <input class="input" id="fExhibition"
+          placeholder="Exhibition Name"
+          value="${esc(c.exhibition||'')}">
+      </div>
+
+      <div class="field full">
+        <label>Notes</label>
+        <textarea class="textarea" id="fNotes"
+          placeholder="Customer notes">${esc(c.notes||'')}</textarea>
+      </div>
+
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary"
+        onclick="saveCustomer('${c.id||''}')">
+        Save Customer
+      </button>
+    </div>
+  `);
+}
