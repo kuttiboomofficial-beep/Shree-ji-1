@@ -123,3 +123,130 @@ function openCustomer(existing){
     </div>
   `);
 }
+function saveCustomer(id){
+
+  const partyName=$('#fPartyName').value.trim();
+  const contactPerson=$('#fContactPerson').value.trim();
+  const phone=$('#fPhone').value.trim();
+
+  if(!partyName || !phone){
+    return toast('Party Name and WhatsApp number are required');
+  }
+
+  const obj={
+    id:id||'C'+Date.now().toString().slice(-7),
+
+    partyName,
+    contactPerson,
+
+    phone,
+    alternate:$('#fAlternate').value.trim(),
+
+    city:$('#fCity').value.trim(),
+    address:$('#fAddress').value.trim(),
+    state:$('#fState').value.trim(),
+
+    exhibition:$('#fExhibition').value.trim(),
+    notes:$('#fNotes').value.trim(),
+
+    // Old-data compatibility
+    name:partyName,
+    shop:partyName,
+
+    created:id
+      ? (customer(id)?.created||dateNow())
+      : dateNow()
+  };
+
+  if(id){
+    const i=data.customers.findIndex(c=>c.id===id);
+    if(i>=0) data.customers[i]=obj;
+  }else{
+    data.customers.push(obj);
+  }
+
+  save();
+  closeModal();
+  layout();
+
+  toast(id
+    ? 'Customer updated successfully'
+    : 'Customer added successfully'
+  );
+}
+function customerRows(list){
+
+  return list.map(c=>`
+
+    <tr>
+
+      <td>
+        <b>${esc(customerName(c))}</b>
+        ${c.contactPerson
+          ? `<div class="row-sub">Contact: ${esc(c.contactPerson)}</div>`
+          : ''
+        }
+      </td>
+
+      <td>${esc(c.phone||'-')}</td>
+
+      <td>${esc(c.city||'-')}</td>
+
+      <td>
+        ${data.orders.filter(o=>o.customerId===c.id).length}
+      </td>
+
+      <td>
+        <div class="actions">
+
+          <button class="btn"
+            onclick="viewCustomer('${c.id}')">
+            View
+          </button>
+
+          <button class="btn whatsapp"
+            onclick="quickWhatsApp('${c.id}')">
+            WhatsApp
+          </button>
+
+          <button class="btn danger"
+            onclick="deleteCustomer('${c.id}')">
+            Delete
+          </button>
+
+        </div>
+      </td>
+
+    </tr>
+
+  `).join('') ||
+
+  `<tr>
+    <td colspan="5" class="empty">
+      No customers found.
+    </td>
+  </tr>`;
+}
+function filterCustomers(){
+
+  const q=$('#customerSearch').value.toLowerCase();
+
+  $('#customerRows').innerHTML=
+    customerRows(
+      data.customers.filter(c=>
+        [
+          c.partyName,
+          c.contactPerson,
+          c.name,
+          c.phone,
+          c.alternate,
+          c.city,
+          c.address,
+          c.exhibition
+        ]
+        .join(' ')
+        .toLowerCase()
+        .includes(q)
+      )
+    );
+}
