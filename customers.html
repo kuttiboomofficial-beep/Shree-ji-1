@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f47b20">
+<title>SHREE JI CONNECT — Customers</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:#f5f6f8;color:#171717}
+header{background:#111;color:#fff;padding:16px 18px;border-bottom:4px solid #f47b20}
+.brand{font-size:21px;font-weight:800}.sub{font-size:12px;color:#bbb;margin-top:3px}
+main{max-width:1100px;margin:auto;padding:16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h2{margin:4px 0}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+button{cursor:pointer;border:0;border-radius:9px;padding:10px 14px;font-weight:700;background:#f47b20;color:#fff}
+button.light{background:#eee;color:#222}
+.card{background:#fff;border:1px solid #e1e2e5;border-radius:14px;padding:16px;box-shadow:0 2px 8px #00000008}
+.search{width:100%;padding:11px;border:1px solid #d7d9dd;border-radius:9px;font-size:14px}
+table{width:100%;border-collapse:collapse;background:#fff}
+th,td{text-align:left;padding:11px 10px;border-bottom:1px solid #eee;font-size:13px}
+th{background:#f6f6f6}
+.modal{display:none;position:fixed;inset:0;background:#0008;z-index:50;padding:20px;overflow:auto}
+.modalbox{background:#fff;max-width:700px;margin:30px auto;border-radius:16px;padding:18px}
+.formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.full{grid-column:1/-1}
+label{font-size:12px;font-weight:700;display:block;margin:8px 0 5px}
+input,textarea{width:100%;padding:11px;border:1px solid #d7d9dd;border-radius:9px;background:#fff;font-size:14px}
+.empty{text-align:center;padding:35px;color:#777}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:11px 16px;border-radius:10px;display:none;z-index:100}
+@media(max-width:750px){.formgrid{grid-template-columns:1fr}main{padding:11px}th,td{padding:9px 6px}}
+</style>
+</head>
+<body>
+<header><div class="brand">SHREE JI CONNECT</div><div class="sub">Customer CRM</div></header>
+<main>
+<div class="top"><div><h2>Customers</h2><div style="color:#70757d;font-size:13px">Party & Contact Management</div></div>
+<button onclick="openCustomer()">+ Add Customer</button></div>
+<div class="actions"><input id="customerSearch" class="search" placeholder="Search Party Name / Contact Person / Mobile / City" oninput="renderCustomers()"></div>
+<div class="card"><div id="customerTable"></div></div>
+</main>
+
+<div id="modal" class="modal"><div class="modalbox">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<h3 id="modalTitle">Customer</h3><button class="light" onclick="closeModal()">✕</button>
+</div>
+<div id="modalBody"></div>
+</div></div>
+<div id="toast" class="toast"></div>
+
+<script>
+const KEY='sjc_v1';
+let db=JSON.parse(localStorage.getItem(KEY)||'null')||{
+customers:[],orders:[],exhibitions:[],settings:{company:'SHREE JI GOLD CREATOR LLP',phone:'',address:''}
+};
+
+function save(){localStorage.setItem(KEY,JSON.stringify(db))}
+function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function customer(id){return db.customers.find(c=>c.id==id)||{}}
+function toast(t){let x=document.getElementById('toast');x.textContent=t;x.style.display='block';setTimeout(()=>x.style.display='none',1800)}
+
+function openCustomer(id=null){
+ let c=id?customer(id):{
+   partyName:'',contactPerson:'',mobile:'',alt:'',city:'',address:'',
+   state:'Tamil Nadu',exhibition:'',notes:''
+ };
+ modalTitle.textContent='Customer '+(id?'Edit':'Add');
+ modalBody.innerHTML=`<div class="formgrid">
+ <div><label>Party Name *</label><input id="f_partyName" value="${esc(c.partyName||c.name||'')}" placeholder="Shop / Company Name"></div>
+ <div><label>Contact Person *</label><input id="f_contactPerson" value="${esc(c.contactPerson||'')}" placeholder="Owner / Manager / Purchase Person"></div>
+ <div><label>Mobile *</label><input id="f_mobile" value="${esc(c.mobile)}" inputmode="numeric"></div>
+ <div><label>Alternate Mobile</label><input id="f_alt" value="${esc(c.alt)}" inputmode="numeric"></div>
+ <div><label>City</label><input id="f_city" value="${esc(c.city)}"></div>
+ <div><label>State</label><input id="f_state" value="${esc(c.state||'Tamil Nadu')}"></div>
+ <div class="full"><label>Address</label><textarea id="f_address" rows="3">${esc(c.address)}</textarea></div>
+ <div><label>Exhibition</label><input id="f_exhibition" value="${esc(c.exhibition)}"></div>
+ <div class="full"><label>Customer Notes</label><textarea id="f_notes" rows="3">${esc(c.notes)}</textarea></div>
+ </div>
+ <div class="actions"><button onclick="saveCustomer(${id||0})">Save Customer</button></div>`;
+ document.getElementById('modal').style.display='block';
+}
+
+function saveCustomer(id){
+ let x={
+   partyName:f_partyName.value.trim(),
+   contactPerson:f_contactPerson.value.trim(),
+   mobile:f_mobile.value.trim(),
+   alt:f_alt.value.trim(),
+   city:f_city.value.trim(),
+   address:f_address.value.trim(),
+   state:f_state.value.trim(),
+   exhibition:f_exhibition.value.trim(),
+   notes:f_notes.value.trim()
+ };
+ if(!x.partyName||!x.contactPerson||!x.mobile)return toast('Party Name, Contact Person and Mobile are required');
+ if(id)Object.assign(customer(id),x);
+ else db.customers.push({id:Date.now(),...x});
+ save();closeModal();renderCustomers();toast('Customer saved');
+}
+
+function renderCustomers(){
+ let q=(document.getElementById('customerSearch').value||'').toLowerCase();
+ let a=db.customers.filter(c=>
+   ((c.partyName||c.name||'')+' '+(c.contactPerson||'')+' '+(c.mobile||'')+' '+(c.city||'')).toLowerCase().includes(q)
+ );
+ customerTable.innerHTML=a.length?`<table><tr>
+ <th>Party Name</th><th>Contact Person</th><th>Mobile</th><th>City</th><th>Orders</th><th>Actions</th>
+ </tr>${a.map(c=>`<tr>
+ <td><b>${esc(c.partyName||c.name||'')}</b></td>
+ <td>${esc(c.contactPerson||'—')}</td>
+ <td>${esc(c.mobile||'')}</td>
+ <td>${esc(c.city||'')}</td>
+ <td>${db.orders.filter(o=>o.customerId==c.id).length}</td>
+ <td><button class="light" onclick="openCustomer(${c.id})">Edit</button></td>
+ </tr>`).join('')}</table>`:'<div class="empty">No customers found</div>';
+}
+
+function closeModal(){document.getElementById('modal').style.display='none'}
+renderCustomers();
+</script>
+</body>
+</html>
