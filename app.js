@@ -176,27 +176,45 @@ function saveCustomer(id){
 }
 function customerRows(list){
 
-  return list.map(c=>`
+  return list.map(c => `
 
     <tr>
 
       <td>
-        <b>${esc(customerName(c))}</b>
-        ${c.contactPerson
-          ? `<div class="row-sub">Contact: ${esc(c.contactPerson)}</div>`
-          : ''
-        }
-      </td>
+        <b>${esc(c.partyName || c.name || 'Customer')}</b>
 
-      <td>${esc(c.phone||'-')}</td>
-
-      <td>${esc(c.city||'-')}</td>
-
-      <td>
-        ${data.orders.filter(o=>o.customerId===c.id).length}
+        ${c.contactPerson ? `
+          <div class="row-sub">
+            Contact: ${esc(c.contactPerson)}
+          </div>
+        ` : ''}
       </td>
 
       <td>
+        ${esc(c.phone || '-')}
+        ${c.alternate ? `
+          <div class="row-sub">
+            Alt: ${esc(c.alternate)}
+          </div>
+        ` : ''}
+      </td>
+
+      <td>
+        ${esc(c.shop || c.partyName || '-')}
+      </td>
+
+      <td>
+        ${esc(c.city || '-')}
+      </td>
+
+      <td>
+        ${data.orders.filter(
+          o => o.customerId === c.id
+        ).length}
+      </td>
+
+      <td>
+
         <div class="actions">
 
           <button class="btn"
@@ -215,6 +233,7 @@ function customerRows(list){
           </button>
 
         </div>
+
       </td>
 
     </tr>
@@ -222,7 +241,7 @@ function customerRows(list){
   `).join('') ||
 
   `<tr>
-    <td colspan="5" class="empty">
+    <td colspan="6" class="empty">
       No customers found.
     </td>
   </tr>`;
