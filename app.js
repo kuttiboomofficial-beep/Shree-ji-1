@@ -1013,55 +1013,1154 @@ function reviews(){
 ========================================================= */
 
 function reports(){
-  const total=data.orders.length;
-  const del=data.orders.filter(o=>o.status==='Delivered').length;
-  const repeat=data.customers.filter(c=>data.orders.filter(o=>o.customerId===c.id).length>1).length;
-  const value=data.orders.reduce((s,o)=>s+Number(o.value||0),0);
+
+  const totalOrders = data.orders.length;
+
+  const totalWeight = data.orders.reduce(
+    (sum,o)=>sum + Number(o.weight||0),
+    0
+  );
+
+  const directCount = data.orders.filter(
+    o=>o.type==='Direct'
+  ).length;
+
+  const smCount = data.orders.filter(
+    o=>o.type==='SM'
+  ).length;
+
+  const pendingCount = data.orders.filter(
+    o=>o.status==='New' ||
+       o.status==='Pending'
+  ).length;
+
+  const startedCount = data.orders.filter(
+    o=>o.status==='Started' ||
+       o.status==='Production'
+  ).length;
+
+  const finishedCount = data.orders.filter(
+    o=>o.status==='Completed' ||
+       o.status==='Ready' ||
+       o.status==='Delivered'
+  ).length;
+
+  const cancelledCount = data.orders.filter(
+    o=>o.status==='Cancelled'
+  ).length;
+
 
   return `
   <div class="page-head">
+
     <div>
-      <div class="eyebrow">Management Intelligence</div>
-      <div class="title">Reports</div>
-      <div class="muted">A clean snapshot for owner-level review.</div>
-    </div>
-  </div>
+      <div class="eyebrow">Database Reports</div>
 
-  <div class="grid three">
-    <div class="card"><div class="stat-label">TOTAL ORDER VALUE</div><div class="metric">${money(value)}</div></div>
-    <div class="card">
-      <div class="stat-label">DELIVERY SUCCESS</div>
-      <div class="metric">${total?Math.round(del/total*100):0}%</div>
-      <div class="progress" style="margin-top:12px"><span style="width:${total?Math.round(del/total*100):0}%"></span></div>
-    </div>
-    <div class="card"><div class="stat-label">REPEAT CUSTOMERS</div><div class="metric">${repeat}</div></div>
-  </div>
+      <div class="title">
+        Reports
+      </div>
 
-  <div class="grid two" style="margin-top:16px">
-    <div class="card">
-      <div class="section-title">Order Status</div>
-      ${
-        ['New','Started','Production','Completed','Hallmarking','Ready','Delivered'].map(s=>{
-          const n=data.orders.filter(o=>o.status===s).length;
-          return `
-          <div style="margin:13px 0">
-            <div class="kpi-bar"><span>${s}</span><b>${n}</b></div>
-            <div class="progress"><span style="width:${total?Math.round(n/total*100):0}%"></span></div>
-          </div>`;
-        }).join('')
-      }
-    </div>
-
-    <div class="card">
-      <div class="section-title">Owner Follow-up Ideas</div>
-      <div class="list">
-        <div class="list-row">🎪<span>Exhibition visitors to follow up</span><b>${data.customers.length}</b></div>
-        <div class="list-row">⭐<span>Reviews to collect</span><b>${data.orders.filter(o=>o.status==='Delivered').length}</b></div>
-        <div class="list-row">🔁<span>Potential repeat customers</span><b>${repeat}</b></div>
+      <div class="muted">
+        Order database summary, customer summary and date-wise reports.
       </div>
     </div>
-  </div>`;
+
+  </div>
+
+
+  <!-- SUMMARY -->
+
+  <div class="grid stats">
+
+    <div class="card">
+      <div class="stat-label">
+        TOTAL ORDERS
+      </div>
+
+      <div class="stat-value">
+        ${totalOrders}
+      </div>
+    </div>
+
+
+    <div class="card">
+      <div class="stat-label">
+        TOTAL WEIGHT
+      </div>
+
+      <div class="stat-value">
+        ${totalWeight.toFixed(3)} g
+      </div>
+    </div>
+
+
+    <div class="card">
+      <div class="stat-label">
+        DIRECT
+      </div>
+
+      <div class="stat-value">
+        ${directCount}
+      </div>
+    </div>
+
+
+    <div class="card">
+      <div class="stat-label">
+        SM
+      </div>
+
+      <div class="stat-value">
+        ${smCount}
+      </div>
+    </div>
+
+
+    <div class="card">
+      <div class="stat-label">
+        PENDING
+      </div>
+
+      <div class="stat-value">
+        ${pendingCount}
+      </div>
+    </div>
+
+
+    <div class="card">
+      <div class="stat-label">
+        STARTED
+      </div>
+
+      <div class="stat-value">
+        ${startedCount}
+      </div>
+    </div>
+
+
+    <div class="card">
+      <div class="stat-label">
+        FINISHED
+      </div>
+
+      <div class="stat-value">
+        ${finishedCount}
+      </div>
+    </div>
+
+
+    <div class="card">
+      <div class="stat-label">
+        CANCELLED
+      </div>
+
+      <div class="stat-value">
+        ${cancelledCount}
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- SEARCH / FILTER -->
+
+  <div class="card" style="margin-top:16px">
+
+    <div class="section-title">
+      🔎 Search / Filter
+    </div>
+
+    <div class="form-grid">
+
+      <div class="field">
+
+        <label>Search</label>
+
+        <input
+          class="input"
+          id="reportSearch"
+          placeholder="Order No / Customer / Phone..."
+          oninput="filterReport()">
+
+      </div>
+
+
+      <div class="field">
+
+        <label>Type</label>
+
+        <select
+          class="select"
+          id="reportType"
+          onchange="filterReport()">
+
+          <option value="">All Types</option>
+          <option value="Direct">Direct</option>
+          <option value="SM">SM</option>
+
+        </select>
+
+      </div>
+
+
+      <div class="field">
+
+        <label>Status</label>
+
+        <select
+          class="select"
+          id="reportStatus"
+          onchange="filterReport()">
+
+          <option value="">All Status</option>
+          <option value="New">New</option>
+          <option value="Started">Started</option>
+          <option value="Production">Production</option>
+          <option value="Completed">Completed</option>
+          <option value="Hallmarking">Hallmarking</option>
+          <option value="Ready">Ready</option>
+          <option value="Delivered">Delivered</option>
+          <option value="Cancelled">Cancelled</option>
+
+        </select>
+
+      </div>
+
+
+      <div class="field">
+
+        <label>From Date</label>
+
+        <input
+          class="input"
+          type="date"
+          id="reportFrom"
+          onchange="filterReport()">
+
+      </div>
+
+
+      <div class="field">
+
+        <label>To Date</label>
+
+        <input
+          class="input"
+          type="date"
+          id="reportTo"
+          onchange="filterReport()">
+
+      </div>
+
+    </div>
+
+
+    <div class="actions" style="margin-top:16px">
+
+      <button
+        class="btn"
+        onclick="clearReportFilter()">
+        Clear Filter
+      </button>
+
+      <button
+        class="btn primary"
+        onclick="printReport()">
+        🖨️ Print Report
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- ORDER REPORT -->
+
+  <div
+    class="card table-wrap"
+    style="margin-top:16px">
+
+    <div class="section-title">
+      📦 Order Database
+    </div>
+
+    <table class="table">
+
+      <thead>
+
+        <tr>
+
+          <th>Order No</th>
+
+          <th>Order Date</th>
+
+          <th>Customer</th>
+
+          <th>Type</th>
+
+          <th>Weight</th>
+
+          <th>Touch</th>
+
+          <th>Advance</th>
+
+          <th>Status</th>
+
+          <th>Delivery</th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody id="reportRows">
+
+        ${reportOrderRows(data.orders)}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+
+  <!-- CUSTOMER SUMMARY -->
+
+  <div
+    class="card table-wrap"
+    style="margin-top:16px">
+
+    <div class="section-title">
+      👥 Customer Summary
+    </div>
+
+    <table class="table">
+
+      <thead>
+
+        <tr>
+
+          <th>Customer</th>
+
+          <th>WhatsApp</th>
+
+          <th>Shop / Company</th>
+
+          <th>Orders</th>
+
+          <th>Total Weight</th>
+
+          <th>Total Advance</th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody>
+
+        ${
+          data.customers.map(c=>{
+
+            const orders=data.orders.filter(
+              o=>o.customerId===c.id
+            );
+
+            const weight=orders.reduce(
+              (s,o)=>s+Number(o.weight||0),
+              0
+            );
+
+            const advance=orders.reduce(
+              (s,o)=>s+Number(o.advance||0),
+              0
+            );
+
+            return `
+
+            <tr>
+
+              <td>
+                <b>${esc(c.name)}</b>
+              </td>
+
+              <td>
+                ${esc(c.phone)}
+              </td>
+
+              <td>
+                ${esc(c.shop||'-')}
+              </td>
+
+              <td>
+                ${orders.length}
+              </td>
+
+              <td>
+                ${weight.toFixed(3)} g
+              </td>
+
+              <td>
+                ${money(advance)}
+              </td>
+
+            </tr>
+
+            `;
+
+          }).join('') ||
+
+          `
+          <tr>
+            <td
+              colspan="6"
+              class="empty">
+              No customers
+            </td>
+          </tr>
+          `
+        }
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+
+  <!-- EXHIBITION SUMMARY -->
+
+  <div
+    class="card table-wrap"
+    style="margin-top:16px">
+
+    <div class="section-title">
+      🎪 Exhibition Summary
+    </div>
+
+    <table class="table">
+
+      <thead>
+
+        <tr>
+
+          <th>Exhibition</th>
+
+          <th>Date</th>
+
+          <th>Venue</th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody>
+
+        ${
+          data.exhibitions.map(e=>`
+
+          <tr>
+
+            <td>
+              <b>${esc(e.name)}</b>
+            </td>
+
+            <td>
+              ${esc(e.date||'-')}
+            </td>
+
+            <td>
+              ${esc(e.venue||'-')}
+            </td>
+
+          </tr>
+
+          `).join('') ||
+
+          `
+          <tr>
+            <td
+              colspan="3"
+              class="empty">
+              No exhibitions
+            </td>
+          </tr>
+          `
+        }
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+
+  <!-- DATE WISE REPORT -->
+
+  <div
+    class="card table-wrap"
+    style="margin-top:16px">
+
+    <div class="section-title">
+      📅 Date-wise Report
+    </div>
+
+    <table class="table">
+
+      <thead>
+
+        <tr>
+
+          <th>Date</th>
+
+          <th>Orders</th>
+
+          <th>Total Weight</th>
+
+          <th>Direct</th>
+
+          <th>SM</th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody>
+
+        ${
+          dateWiseReport()
+        }
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  `;
 }
+
+
+/* =========================================================
+   REPORT ORDER ROWS
+   ========================================================= */
+
+function reportOrderRows(list){
+
+  if(!list.length){
+
+    return `
+    <tr>
+
+      <td
+        colspan="9"
+        class="empty">
+
+        No orders found.
+
+      </td>
+
+    </tr>
+    `;
+
+  }
+
+
+  return list.map(o=>{
+
+    const c=customer(o.customerId);
+
+    return `
+
+    <tr>
+
+      <td>
+        <b>${esc(o.orderNo||'-')}</b>
+      </td>
+
+      <td>
+        ${esc(o.orderDate||'-')}
+      </td>
+
+      <td>
+        ${esc(c?.name||'-')}
+      </td>
+
+      <td>
+        ${esc(o.type||'-')}
+      </td>
+
+      <td>
+        ${esc(o.weight||'0')} g
+      </td>
+
+      <td>
+        ${esc(o.touch||'-')}
+      </td>
+
+      <td>
+        ${money(o.advance)}
+      </td>
+
+      <td>
+
+        <span class="pill ${
+          o.status==='Delivered'
+          ?'green'
+          :o.status==='Completed'
+          ?'blue'
+          :'gold'
+        }">
+
+          ${esc(o.status||'New')}
+
+        </span>
+
+      </td>
+
+      <td>
+        ${esc(o.deliveryDate||'-')}
+      </td>
+
+    </tr>
+
+    `;
+
+  }).join('');
+
+}
+
+
+/* =========================================================
+   REPORT FILTER
+   ========================================================= */
+
+function filterReport(){
+
+  const search=
+    ($('#reportSearch')?.value||'')
+    .trim()
+    .toLowerCase();
+
+  const type=
+    ($('#reportType')?.value||'');
+
+  const status=
+    ($('#reportStatus')?.value||'');
+
+  const from=
+    ($('#reportFrom')?.value||'');
+
+  const to=
+    ($('#reportTo')?.value||'');
+
+
+  const filtered=data.orders.filter(o=>{
+
+    const c=customer(o.customerId);
+
+    const searchText=[
+      o.orderNo,
+      c?.name,
+      c?.phone,
+      c?.shop,
+      o.type,
+      o.status
+    ]
+    .join(' ')
+    .toLowerCase();
+
+
+    if(
+      search &&
+      !searchText.includes(search)
+    )
+      return false;
+
+
+    if(
+      type &&
+      o.type!==type
+    )
+      return false;
+
+
+    if(
+      status &&
+      o.status!==status
+    )
+      return false;
+
+
+    const d=o.orderDate||'';
+
+
+    if(
+      from &&
+      d<from
+    )
+      return false;
+
+
+    if(
+      to &&
+      d>to
+    )
+      return false;
+
+
+    return true;
+
+  });
+
+
+  const rows=$('#reportRows');
+
+  if(rows){
+
+    rows.innerHTML=
+      reportOrderRows(filtered);
+
+  }
+
+}
+
+
+/* =========================================================
+   CLEAR REPORT FILTER
+   ========================================================= */
+
+function clearReportFilter(){
+
+  const ids=[
+    'reportSearch',
+    'reportType',
+    'reportStatus',
+    'reportFrom',
+    'reportTo'
+  ];
+
+  ids.forEach(id=>{
+
+    const el=$('#'+id);
+
+    if(el)
+      el.value='';
+
+  });
+
+
+  const rows=$('#reportRows');
+
+  if(rows)
+    rows.innerHTML=
+      reportOrderRows(data.orders);
+
+}
+
+
+/* =========================================================
+   DATE-WISE REPORT
+   ========================================================= */
+
+function dateWiseReport(){
+
+  const dates={};
+
+
+  data.orders.forEach(o=>{
+
+    const date=
+      o.orderDate ||
+      o.startDate ||
+      dateNow();
+
+
+    if(!dates[date]){
+
+      dates[date]={
+        orders:0,
+        weight:0,
+        direct:0,
+        sm:0
+      };
+
+    }
+
+
+    dates[date].orders++;
+
+    dates[date].weight +=
+      Number(o.weight||0);
+
+
+    if(o.type==='Direct')
+      dates[date].direct++;
+
+
+    if(o.type==='SM')
+      dates[date].sm++;
+
+  });
+
+
+  const keys=
+    Object.keys(dates)
+    .sort()
+    .reverse();
+
+
+  if(!keys.length){
+
+    return `
+    <tr>
+
+      <td
+        colspan="5"
+        class="empty">
+
+        No orders available.
+
+      </td>
+
+    </tr>
+    `;
+
+  }
+
+
+  return keys.map(date=>{
+
+    const x=dates[date];
+
+    return `
+
+    <tr>
+
+      <td>
+        <b>${esc(date)}</b>
+      </td>
+
+      <td>
+        ${x.orders}
+      </td>
+
+      <td>
+        ${x.weight.toFixed(3)} g
+      </td>
+
+      <td>
+        ${x.direct}
+      </td>
+
+      <td>
+        ${x.sm}
+      </td>
+
+    </tr>
+
+    `;
+
+  }).join('');
+
+}
+
+
+/* =========================================================
+   PRINT REPORT
+   ========================================================= */
+
+function printReport(){
+
+  const search=
+    ($('#reportSearch')?.value||'')
+    .trim()
+    .toLowerCase();
+
+  const type=
+    ($('#reportType')?.value||'');
+
+  const status=
+    ($('#reportStatus')?.value||'');
+
+  const from=
+    ($('#reportFrom')?.value||'');
+
+  const to=
+    ($('#reportTo')?.value||'');
+
+
+  const filtered=data.orders.filter(o=>{
+
+    const c=customer(o.customerId);
+
+    const text=[
+      o.orderNo,
+      c?.name,
+      c?.phone,
+      c?.shop,
+      o.type,
+      o.status
+    ]
+    .join(' ')
+    .toLowerCase();
+
+
+    if(search&&!text.includes(search))
+      return false;
+
+    if(type&&o.type!==type)
+      return false;
+
+    if(status&&o.status!==status)
+      return false;
+
+    const d=o.orderDate||'';
+
+    if(from&&d<from)
+      return false;
+
+    if(to&&d>to)
+      return false;
+
+    return true;
+
+  });
+
+
+  const rows=filtered.map(o=>{
+
+    const c=customer(o.customerId);
+
+    return `
+
+    <tr>
+
+      <td>${esc(o.orderNo||'-')}</td>
+
+      <td>${esc(o.orderDate||'-')}</td>
+
+      <td>${esc(c?.name||'-')}</td>
+
+      <td>${esc(o.type||'-')}</td>
+
+      <td>${esc(o.weight||'0')} g</td>
+
+      <td>${esc(o.touch||'-')}</td>
+
+      <td>${money(o.advance)}</td>
+
+      <td>${esc(o.status||'-')}</td>
+
+      <td>${esc(o.deliveryDate||'-')}</td>
+
+    </tr>
+
+    `;
+
+  }).join('');
+
+
+  const win=
+    window.open(
+      '',
+      '_blank'
+    );
+
+
+  if(!win){
+
+    toast('Please allow pop-ups to print report');
+
+    return;
+
+  }
+
+
+  win.document.write(`
+
+  <!doctype html>
+
+  <html>
+
+  <head>
+
+    <title>
+      SHREE JI CONNECT - Database Report
+    </title>
+
+    <style>
+
+      body{
+        font-family:Arial,sans-serif;
+        padding:30px;
+        color:#111;
+      }
+
+      h1{
+        margin-bottom:5px;
+      }
+
+      .sub{
+        color:#666;
+        margin-bottom:20px;
+      }
+
+      table{
+        width:100%;
+        border-collapse:collapse;
+        margin-top:20px;
+      }
+
+      th,td{
+        border:1px solid #ccc;
+        padding:8px;
+        text-align:left;
+        font-size:12px;
+      }
+
+      th{
+        background:#eee;
+      }
+
+      .summary{
+        display:flex;
+        gap:20px;
+        margin-top:20px;
+      }
+
+      .box{
+        border:1px solid #ccc;
+        padding:12px;
+      }
+
+      @media print{
+
+        body{
+          padding:10px;
+        }
+
+      }
+
+    </style>
+
+  </head>
+
+
+  <body>
+
+    <h1>
+      SHREE JI GOLD CREATOR LLP
+    </h1>
+
+    <div class="sub">
+      SHREE JI CONNECT — Database Report
+    </div>
+
+
+    <div class="summary">
+
+      <div class="box">
+        <b>Total Orders</b><br>
+        ${filtered.length}
+      </div>
+
+      <div class="box">
+        <b>Total Weight</b><br>
+        ${
+          filtered.reduce(
+            (s,o)=>s+Number(o.weight||0),
+            0
+          ).toFixed(3)
+        } g
+      </div>
+
+      <div class="box">
+        <b>Direct</b><br>
+        ${
+          filtered.filter(
+            o=>o.type==='Direct'
+          ).length
+        }
+      </div>
+
+      <div class="box">
+        <b>SM</b><br>
+        ${
+          filtered.filter(
+            o=>o.type==='SM'
+          ).length
+        }
+      </div>
+
+    </div>
+
+
+    <table>
+
+      <thead>
+
+        <tr>
+
+          <th>Order No</th>
+          <th>Order Date</th>
+          <th>Customer</th>
+          <th>Type</th>
+          <th>Weight</th>
+          <th>Touch</th>
+          <th>Advance</th>
+          <th>Status</th>
+          <th>Delivery</th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody>
+
+        ${
+          rows ||
+
+          `
+          <tr>
+            <td colspan="9">
+              No orders found
+            </td>
+          </tr>
+          `
+        }
+
+      </tbody>
+
+    </table>
+
+
+    <script>
+
+      window.onload=function(){
+
+        window.print();
+
+      };
+
+    <\/script>
+
+  </body>
+
+  </html>
+
+  `);
+
+
+  win.document.close();
+
+       }
+
+
+
 
 /* =========================================================
    SETTINGS
