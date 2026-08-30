@@ -4,10 +4,14 @@ const seed={
   customers:[
     {
       id:'C001',
-      name:'Demo Customer',
+      name:'Demo Jewellery',
+      contactPerson:'Demo Customer',
       phone:'919876543210',
-      shop:'Demo Jewellery',
+      alternate:'',
       city:'Coimbatore',
+      address:'',
+      state:'Tamil Nadu',
+      exhibition:'',
       notes:'Sample record',
       created:'2026-08-27'
     }
@@ -57,6 +61,7 @@ function money(v){
 function wa(phone,msg){
   let p=String(phone||'').replace(/\D/g,'');
   if(p.length===10)p='91'+p;
+  if(!p){toast('WhatsApp number not available');return;}
   window.open(
     'https://wa.me/'+p+'?text='+encodeURIComponent(msg),
     '_blank'
@@ -83,7 +88,7 @@ const templates=[
 ];
 
 function msgFor(type,c,o={}){
-  const name=c?.name||'Customer';
+  const name=c?.contactPerson||c?.name||'Customer';
   const order=o.orderNo||o.id||'your order';
 
   const map={
@@ -217,40 +222,21 @@ function layout(){
   m.innerHTML=render();
 
   $$('.nav-item').forEach(
-    b=>b.classList.toggle(
-      'active',
-      b.dataset.view===view
-    )
+    b=>b.classList.toggle('active',b.dataset.view===view)
   );
 }
 
 function dashboard(){
-
-  const active=data.orders.filter(
-    o=>!['Delivered','Cancelled'].includes(o.status)
-  ).length;
-
-  const done=data.orders.filter(
-    o=>o.status==='Delivered'
-  ).length;
-
-  const pending=data.orders.filter(
-    o=>o.status!=='Delivered'
-  ).length;
-
-  const value=data.orders.reduce(
-    (s,o)=>s+Number(o.value||0),
-    0
-  );
+  const active=data.orders.filter(o=>!['Delivered','Cancelled'].includes(o.status)).length;
+  const done=data.orders.filter(o=>o.status==='Delivered').length;
+  const pending=data.orders.filter(o=>o.status!=='Delivered').length;
+  const value=data.orders.reduce((s,o)=>s+Number(o.value||0),0);
 
   return `
   <div class="hero">
     <div class="eyebrow">Owner Dashboard</div>
     <h2>SHREE JI GOLD CREATOR LLP</h2>
-    <div class="muted">
-      Customer relationships, orders and WhatsApp communication — all in one place.
-    </div>
-
+    <div class="muted">Customer relationships, orders and WhatsApp communication — all in one place.</div>
     <div class="quick">
       <button class="btn primary" onclick="openCustomer()">➕ Add Customer</button>
       <button class="btn" onclick="openOrder()">📦 New Order</button>
@@ -260,836 +246,867 @@ function dashboard(){
   </div>
 
   <div class="grid stats">
-
-    <div class="card">
-      <div class="stat-label">TOTAL CUSTOMERS</div>
-      <div class="stat-value">${data.customers.length}</div>
-      <div class="stat-note">● CRM database</div>
-    </div>
-
-    <div class="card">
-      <div class="stat-label">ACTIVE ORDERS</div>
-      <div class="stat-value">${active}</div>
-      <div class="stat-note">● In progress</div>
-    </div>
-
-    <div class="card">
-      <div class="stat-label">COMPLETED</div>
-      <div class="stat-value">${done}</div>
-      <div class="stat-note">● Delivered</div>
-    </div>
-
-    <div class="card">
-      <div class="stat-label">PENDING DELIVERY</div>
-      <div class="stat-value">${pending}</div>
-      <div class="stat-note">● Requires attention</div>
-    </div>
-
-    <div class="card">
-      <div class="stat-label">ORDER VALUE</div>
-      <div class="stat-value">${money(value)}</div>
-      <div class="stat-note">● Existing recorded data</div>
-    </div>
-
+    <div class="card"><div class="stat-label">TOTAL CUSTOMERS</div><div class="stat-value">${data.customers.length}</div><div class="stat-note">● CRM database</div></div>
+    <div class="card"><div class="stat-label">ACTIVE ORDERS</div><div class="stat-value">${active}</div><div class="stat-note">● In progress</div></div>
+    <div class="card"><div class="stat-label">COMPLETED</div><div class="stat-value">${done}</div><div class="stat-note">● Delivered</div></div>
+    <div class="card"><div class="stat-label">PENDING DELIVERY</div><div class="stat-value">${pending}</div><div class="stat-note">● Requires attention</div></div>
+    <div class="card"><div class="stat-label">ORDER VALUE</div><div class="stat-value">${money(value)}</div><div class="stat-note">● Existing recorded data</div></div>
   </div>
 
   <div class="grid two">
-
     <div class="card">
       <div class="section-title">📦 Recent Orders</div>
-
       ${
         data.orders.length
-        ?
-        `<div class="list">
-          ${
-            data.orders.slice(-5).reverse().map(o=>`
-              <div class="list-row">
-                <div class="row-main">
-                  <div class="row-title">
-                    ${esc(o.orderNo)} • ${esc(customer(o.customerId)?.name||'Unknown')}
-                  </div>
-                  <div class="row-sub">
-                    ${esc(o.startDate||o.orderDate||'-')}
-                  </div>
-                </div>
-
-                <span class="pill ${
-                  o.status==='Delivered'
-                  ?'green'
-                  :o.status==='Completed'
-                  ?'blue'
-                  :'gold'
-                }">
-                  ${esc(o.status)}
-                </span>
+        ? `<div class="list">${data.orders.slice(-5).reverse().map(o=>`
+            <div class="list-row">
+              <div class="row-main">
+                <div class="row-title">${esc(o.orderNo)} • ${esc(customer(o.customerId)?.name||'Unknown')}</div>
+                <div class="row-sub">${esc(o.startDate||o.orderDate||'-')}</div>
               </div>
-            `).join('')
-          }
-        </div>`
-        :
-        `<div class="empty">No orders yet. Create your first order.</div>`
+              <span class="pill ${o.status==='Delivered'?'green':o.status==='Completed'?'blue':'gold'}">${esc(o.status)}</span>
+            </div>`).join('')}</div>`
+        : `<div class="empty">No orders yet. Create your first order.</div>`
       }
-
     </div>
-
     <div class="card">
       <div class="section-title">⭐ Recent Reviews</div>
-
       ${
         data.reviews.length
-        ?
-        `<div class="list">
-          ${
-            data.reviews.slice(-5).reverse().map(r=>`
-              <div class="list-row">
-                <div>
-                  <b>${esc(customer(r.customerId)?.name||'Customer')}</b>
-                  <div class="row-sub">${esc(r.text||'No comment')}</div>
-                </div>
-                <span>${'⭐'.repeat(Number(r.rating||0))}</span>
-              </div>
-            `).join('')
-          }
-        </div>`
-        :
-        `<div class="empty">Reviews will appear here after delivery.</div>`
+        ? `<div class="list">${data.reviews.slice(-5).reverse().map(r=>`
+            <div class="list-row">
+              <div><b>${esc(customer(r.customerId)?.name||'Customer')}</b><div class="row-sub">${esc(r.text||'No comment')}</div></div>
+              <span>${'⭐'.repeat(Number(r.rating||0))}</span>
+            </div>`).join('')}</div>`
+        : `<div class="empty">Reviews will appear here after delivery.</div>`
       }
-
     </div>
-
   </div>`;
 }
 
-function customers(){
+/* =========================================================
+   CUSTOMERS
+========================================================= */
 
+function customers(){
   return `
   <div class="page-head">
     <div>
       <div class="eyebrow">CRM</div>
       <div class="title">Customers</div>
-      <div class="muted">
-        Every customer, contact and relationship in one place.
-      </div>
+      <div class="muted">Every party, contact person and relationship in one place.</div>
     </div>
-
-    <button class="btn primary" onclick="openCustomer()">
-      ➕ Add Customer
-    </button>
+    <button class="btn primary" onclick="openCustomer()">➕ Add Customer</button>
   </div>
 
   <div class="searchbar">
-    <input
-      class="input"
-      id="customerSearch"
-      placeholder="Search name, WhatsApp number, shop or city..."
-      oninput="filterCustomers()"
-    >
+    <input class="input" id="customerSearch" placeholder="Search party, contact person, WhatsApp number or city..." oninput="filterCustomers()">
   </div>
 
   <div class="card table-wrap">
     <table class="table">
-
       <thead>
         <tr>
-          <th>Customer</th>
+          <th>Party Name</th>
+          <th>Contact Person</th>
           <th>WhatsApp</th>
-          <th>Shop / Company</th>
           <th>City</th>
           <th>Orders</th>
           <th>Actions</th>
         </tr>
       </thead>
-
-      <tbody id="customerRows">
-        ${customerRows(data.customers)}
-      </tbody>
-
+      <tbody id="customerRows">${customerRows(data.customers)}</tbody>
     </table>
   </div>`;
 }
 
 function customerRows(list){
-
   return list.map(c=>`
-
     <tr>
-
-      <td>
-        <b>${esc(c.name)}</b>
-        <div class="row-sub">${esc(c.notes||'')}</div>
-      </td>
-
+      <td><b>${esc(c.name)}</b></td>
+      <td>${esc(c.contactPerson||'-')}</td>
       <td>${esc(c.phone)}</td>
-
-      <td>${esc(c.shop||'-')}</td>
-
       <td>${esc(c.city||'-')}</td>
-
-      <td>
-        ${data.orders.filter(o=>o.customerId===c.id).length}
-      </td>
-
+      <td>${data.orders.filter(o=>o.customerId===c.id).length}</td>
       <td>
         <div class="actions">
-
-          <button class="btn" onclick="viewCustomer('${c.id}')">
-            View
-          </button>
-
-          <button class="btn whatsapp" onclick="quickWhatsApp('${c.id}')">
-            WhatsApp
-          </button>
-
-          <button class="btn danger" onclick="deleteCustomer('${c.id}')">
-            Delete
-          </button>
-
+          <button class="btn" onclick="viewCustomer('${c.id}')">View</button>
+          <button class="btn whatsapp" onclick="quickWhatsApp('${c.id}')">WhatsApp</button>
+          <button class="btn danger" onclick="deleteCustomer('${c.id}')">Delete</button>
         </div>
       </td>
-
     </tr>
-
-  `).join('')||
-
-  `<tr>
-    <td colspan="6" class="empty">
-      No customers found.
-    </td>
-  </tr>`;
+  `).join('')||`<tr><td colspan="6" class="empty">No customers found.</td></tr>`;
 }
 
-
 /* =========================================================
-   ORDERS
-   ========================================================= */
+   ADD / EDIT CUSTOMER
+========================================================= */
 
-function orders(){
+function openCustomer(existing){
+  const c=existing||{};
 
-  return `
-  <div class="page-head">
+  openModal(
+    existing?'Edit Customer':'Add Customer',
+    `
+    <div class="form-grid">
+      <div class="field full">
+        <label>Party Name *</label>
+        <input class="input" id="fName" placeholder="Company / Shop / Party Name" value="${esc(c.name||'')}">
+      </div>
 
-    <div>
-      <div class="eyebrow">Production</div>
-      <div class="title">Orders</div>
-      <div class="muted">
-        Track every order from start to delivery.
+      <div class="field">
+        <label>Contact Person</label>
+        <input class="input" id="fContact" placeholder="Contact Person Name" value="${esc(c.contactPerson||'')}">
+      </div>
+
+      <div class="field">
+        <label>WhatsApp Number *</label>
+        <input class="input" id="fPhone" inputmode="tel" placeholder="10 digit WhatsApp number" value="${esc(c.phone||'')}">
+      </div>
+
+      <div class="field">
+        <label>Alternate Number</label>
+        <input class="input" id="fAlternate" inputmode="tel" placeholder="Alternate mobile number" value="${esc(c.alternate||'')}">
+      </div>
+
+      <div class="field">
+        <label>City</label>
+        <input class="input" id="fCity" value="${esc(c.city||'')}">
+      </div>
+
+      <div class="field full">
+        <label>Address</label>
+        <textarea class="textarea" id="fAddress" placeholder="Full address">${esc(c.address||'')}</textarea>
+      </div>
+
+      <div class="field">
+        <label>State</label>
+        <input class="input" id="fState" value="${esc(c.state||'Tamil Nadu')}">
+      </div>
+
+      <div class="field">
+        <label>Exhibition</label>
+        <input class="input" id="fExhibition" placeholder="Exhibition name" value="${esc(c.exhibition||'')}">
+      </div>
+
+      <div class="field full">
+        <label>Notes</label>
+        <textarea class="textarea" id="fNotes" placeholder="Customer notes">${esc(c.notes||'')}</textarea>
       </div>
     </div>
 
-    <button class="btn primary" onclick="openOrder()">
-      ➕ New Order
-    </button>
-
-  </div>
-
-  <div class="card table-wrap">
-
-    <table class="table">
-
-      <thead>
-        <tr>
-          <th>Order</th>
-          <th>Order Date</th>
-          <th>Customer</th>
-          <th>Type</th>
-          <th>Weight</th>
-          <th>Advance</th>
-          <th>Status</th>
-          <th>Delivery</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-
-      <tbody>
-
-        ${
-          data.orders.slice().reverse().map(o=>`
-
-          <tr>
-
-            <td>
-              <b>${esc(o.orderNo||'-')}</b>
-            </td>
-
-            <td>
-              ${esc(o.orderDate||'-')}
-            </td>
-
-            <td>
-              ${esc(customer(o.customerId)?.name||'-')}
-            </td>
-
-            <td>
-              ${esc(o.type||'-')}
-            </td>
-
-            <td>
-              ${esc(o.weight||'-')} g
-            </td>
-
-            <td>
-              ${money(o.advance)}
-            </td>
-
-            <td>
-              <span class="pill ${
-                o.status==='Delivered'
-                ?'green'
-                :o.status==='Completed'
-                ?'blue'
-                :'gold'
-              }">
-                ${esc(o.status||'New')}
-              </span>
-            </td>
-
-            <td>
-              ${esc(o.deliveryDate||'-')}
-            </td>
-
-            <td>
-
-              <div class="actions">
-
-                <button
-                  class="btn"
-                  onclick="editOrder('${o.id}')">
-                  Edit
-                </button>
-
-                <button
-                  class="btn"
-                  onclick="orderWhatsApp('${o.id}')">
-                  💬
-                </button>
-
-              </div>
-
-            </td>
-
-          </tr>
-
-          `).join('')||
-
-          `<tr>
-            <td colspan="9" class="empty">
-              No orders yet.
-            </td>
-          </tr>`
-        }
-
-      </tbody>
-
-    </table>
-
-  </div>`;
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="saveCustomer('${c.id||''}')">Save Customer</button>
+    </div>
+    `
+  );
 }
 
+function saveCustomer(id){
+  const name=$('#fName').value.trim();
+  const phone=$('#fPhone').value.trim();
+
+  if(!name||!phone)
+    return toast('Party Name and WhatsApp number are required');
+
+  const old=id?data.customers.find(c=>c.id===id):null;
+
+  const obj={
+    id:id||'C'+Date.now().toString().slice(-7),
+    name,
+    contactPerson:$('#fContact').value.trim(),
+    phone,
+    alternate:$('#fAlternate').value.trim(),
+    city:$('#fCity').value.trim(),
+    address:$('#fAddress').value.trim(),
+    state:$('#fState').value.trim(),
+    exhibition:$('#fExhibition').value.trim(),
+    notes:$('#fNotes').value.trim(),
+    created:old?.created||dateNow()
+  };
+
+  if(id){
+    const i=data.customers.findIndex(c=>c.id===id);
+    if(i>=0) data.customers[i]=obj;
+  }else{
+    data.customers.push(obj);
+  }
+
+  save();
+  closeModal();
+  layout();
+
+  toast(id?'Customer updated':'Customer added successfully');
+}
+
+function deleteCustomer(id){
+  if(!confirm('Delete this customer?')) return;
+
+  data.customers=data.customers.filter(c=>c.id!==id);
+  data.orders=data.orders.filter(o=>o.customerId!==id);
+
+  save();
+  layout();
+  toast('Customer deleted');
+}
+
+function viewCustomer(id){
+  const c=customer(id);
+  const os=data.orders.filter(o=>o.customerId===id);
+
+  openModal(
+    c.name,
+    `
+    <div class="grid two">
+      <div class="card">
+        <div class="section-title">Customer Details</div>
+        <p><b>Party Name:</b> ${esc(c.name)}</p>
+        <p><b>Contact Person:</b> ${esc(c.contactPerson||'-')}</p>
+        <p><b>WhatsApp:</b> ${esc(c.phone)}</p>
+        <p><b>Alternate:</b> ${esc(c.alternate||'-')}</p>
+        <p><b>City:</b> ${esc(c.city||'-')}</p>
+        <p><b>Address:</b> ${esc(c.address||'-')}</p>
+        <p><b>State:</b> ${esc(c.state||'-')}</p>
+        <p><b>Exhibition:</b> ${esc(c.exhibition||'-')}</p>
+        <p><b>Notes:</b> ${esc(c.notes||'-')}</p>
+
+        <div class="actions">
+          <button class="btn whatsapp" onclick="quickWhatsApp('${id}')">💬 WhatsApp</button>
+          <button class="btn" onclick="openCustomer(customer('${id}'));closeModal()">Edit</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">📜 Customer Timeline</div>
+        <div class="timeline">
+          ${
+            os.map(o=>`
+              <div class="event">
+                <b>${esc(o.status)}</b>
+                <div class="row-sub">Order ${esc(o.orderNo)}</div>
+                <small>${esc(o.startDate||o.orderDate||'-')}</small>
+              </div>
+            `).join('')||'<div class="muted">No orders yet.</div>'
+          }
+        </div>
+      </div>
+    </div>
+    `
+  );
+}
+
+function quickWhatsApp(id){
+  const c=customer(id);
+  wa(c.phone,msgFor('Follow-up',c));
+
+  data.messages.push({customerId:id,type:'Follow-up',date:dateNow()});
+  save();
+
+  toast('WhatsApp opened');
+}
+
+function filterCustomers(){
+  const q=$('#customerSearch').value.toLowerCase();
+
+  $('#customerRows').innerHTML=customerRows(
+    data.customers.filter(c=>
+      [c.name,c.contactPerson,c.phone,c.alternate,c.city,c.address,c.state,c.exhibition,c.notes]
+        .join(' ')
+        .toLowerCase()
+        .includes(q)
+    )
+  );
+}
 
 /* =========================================================
    WHATSAPP
-   ========================================================= */
+========================================================= */
 
 function whatsapp(){
-
   return `
   <div class="page-head">
-
     <div>
       <div class="eyebrow">Communication</div>
       <div class="title">WhatsApp Center</div>
-
-      <div class="muted">
-        Choose a ready-made business message, then open WhatsApp with one tap.
-      </div>
+      <div class="muted">Choose a ready-made business message, then open WhatsApp with one tap.</div>
     </div>
-
   </div>
 
-  <div class="notice">
-    ⚡ Messages are prepared for you. WhatsApp opens for final review and sending.
-  </div>
+  <div class="notice">⚡ Messages are prepared for you. WhatsApp opens for final review and sending.</div>
 
-  <div
-    class="grid template-grid"
-    style="margin-top:16px">
-
-    ${
-      templates.map(t=>`
-
-      <div
-        class="card template"
-        onclick="openWhatsAppTemplate('${esc(t[1])}')">
-
-        <div class="template-icon">
-          ${t[0]}
-        </div>
-
+  <div class="grid template-grid" style="margin-top:16px">
+    ${templates.map(t=>`
+      <div class="card template" onclick="openWhatsAppTemplate('${esc(t[1])}')">
+        <div class="template-icon">${t[0]}</div>
         <h4>${esc(t[1])}</h4>
-
         <p>${esc(t[2])}</p>
-
       </div>
-
-      `).join('')
-    }
-
+    `).join('')}
   </div>`;
 }
 
+function openWhatsAppTemplate(type){
+  const opts=data.customers.map(c=>
+    `<option value="${c.id}">${esc(c.name)}${c.contactPerson?' — '+esc(c.contactPerson):''} — ${esc(c.phone)}</option>`
+  ).join('');
+
+  openModal(
+    type,
+    `
+    <div class="field">
+      <label>Customer</label>
+      <select class="select" id="waCustomer">${opts||'<option>No customers</option>'}</select>
+    </div>
+
+    <div class="field" style="margin-top:12px">
+      <label>Message Preview</label>
+      <textarea class="textarea" id="waPreview" rows="12"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="sendTemplate('${esc(type)}')">💬 Open WhatsApp</button>
+    </div>
+    `
+  );
+
+  const s=$('#waCustomer');
+  const update=()=>{
+    const c=customer(s.value);
+    $('#waPreview').value=msgFor(type,c);
+  };
+
+  s.onchange=update;
+  update();
+}
+
+function sendTemplate(type){
+  const c=customer($('#waCustomer').value);
+  if(!c) return;
+
+  wa(c.phone,$('#waPreview').value);
+
+  data.messages.push({customerId:c.id,type,date:dateNow()});
+  save();
+  closeModal();
+}
+
+/* =========================================================
+   ORDERS  (unchanged — already correct)
+========================================================= */
+
+function orders(){
+  return `
+  <div class="page-head">
+    <div>
+      <div class="eyebrow">Production</div>
+      <div class="title">Orders</div>
+      <div class="muted">Track every order from start to delivery.</div>
+    </div>
+    <button class="btn primary" onclick="openOrder()">➕ New Order</button>
+  </div>
+
+  <div class="card table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Order</th><th>Order Date</th><th>Customer</th><th>Type</th>
+          <th>Weight</th><th>Advance</th><th>Status</th><th>Delivery</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${
+          data.orders.slice().reverse().map(o=>`
+          <tr>
+            <td><b>${esc(o.orderNo||'-')}</b></td>
+            <td>${esc(o.orderDate||'-')}</td>
+            <td>${esc(customer(o.customerId)?.name||'-')}</td>
+            <td>${esc(o.type||'-')}</td>
+            <td>${esc(o.weight||'-')} g</td>
+            <td>${money(o.advance)}</td>
+            <td><span class="pill ${o.status==='Delivered'?'green':o.status==='Completed'?'blue':'gold'}">${esc(o.status||'New')}</span></td>
+            <td>${esc(o.deliveryDate||'-')}</td>
+            <td>
+              <div class="actions">
+                <button class="btn" onclick="editOrder('${o.id}')">Edit</button>
+                <button class="btn" onclick="orderWhatsApp('${o.id}')">💬</button>
+              </div>
+            </td>
+          </tr>
+          `).join('')||`<tr><td colspan="9" class="empty">No orders yet.</td></tr>`
+        }
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function openOrder(existing){
+  const o=existing||{};
+
+  const opts=data.customers.map(c=>
+    `<option value="${c.id}" ${c.id===o.customerId?'selected':''}>${esc(c.name)} — ${esc(c.phone)}</option>`
+  ).join('');
+
+  openModal(
+    existing?'Order Edit':'New Order',
+    `
+    <div class="form-grid">
+      <div class="field">
+        <label>Order Number *</label>
+        <input class="input" id="oNo" value="${esc(o.orderNo||'SJ-'+new Date().getFullYear()+'-'+String(data.orders.length+1).padStart(4,'0'))}">
+      </div>
+
+      <div class="field">
+        <label>Order Date *</label>
+        <input class="input" type="date" id="oDate" value="${esc(o.orderDate||dateNow())}">
+      </div>
+
+      <div class="field">
+        <label>Customer *</label>
+        <select class="select" id="oCustomer">${opts||'<option value="">Add customer first</option>'}</select>
+      </div>
+
+      <div class="field">
+        <label>Type</label>
+        <select class="select" id="oType">
+          <option value="Direct" ${o.type==='Direct'||!o.type?'selected':''}>Direct</option>
+          <option value="SM" ${o.type==='SM'?'selected':''}>SM</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Weight (g) *</label>
+        <input class="input" type="number" step="0.001" id="oWeight" value="${esc(o.weight||'')}">
+      </div>
+
+      <div class="field">
+        <label>Touch *</label>
+        <input class="input" id="oTouch" value="${esc(o.touch||'')}">
+      </div>
+
+      <div class="field">
+        <label>Screw Type</label>
+        <input class="input" id="oScrew" value="${esc(o.screw||'')}">
+      </div>
+
+      <div class="field">
+        <label>Lady's Ring Size *</label>
+        <input class="input" id="oLadyRing" placeholder="Example: 9 to 15" value="${esc(o.ladyRing||'')}">
+      </div>
+
+      <div class="field">
+        <label>Gent's Ring Size *</label>
+        <input class="input" id="oGentRing" placeholder="Example: 17 to 25" value="${esc(o.gentRing||'')}">
+      </div>
+
+      <div class="field">
+        <label>HUID *</label>
+        <select class="select" id="oHuid">
+          <option value="Yes" ${o.huid==='Yes'||!o.huid?'selected':''}>Yes</option>
+          <option value="No" ${o.huid==='No'?'selected':''}>No</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Advance Mode</label>
+        <select class="select" id="oAdvanceMode">
+          <option value="Cash" ${o.advanceMode==='Cash'||!o.advanceMode?'selected':''}>Cash</option>
+          <option value="UPI" ${o.advanceMode==='UPI'?'selected':''}>UPI</option>
+          <option value="Bank" ${o.advanceMode==='Bank'?'selected':''}>Bank</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Advance Amount (₹) *</label>
+        <input class="input" type="number" step="0.01" id="oAdvance" value="${esc(o.advance||'')}">
+      </div>
+
+      <div class="field">
+        <label>Start Date</label>
+        <input class="input" type="date" id="oStart" value="${esc(o.startDate||'')}">
+      </div>
+
+      <div class="field">
+        <label>Delivered Date</label>
+        <input class="input" type="date" id="oDelivery" value="${esc(o.deliveryDate||'')}">
+      </div>
+
+      <div class="field">
+        <label>Status</label>
+        <select class="select" id="oStatus">
+          ${['New','Started','Production','Completed','Hallmarking','Ready','Delivered','Cancelled']
+            .map(s=>`<option ${s===(o.status||'New')?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="field full">
+        <label>Notes</label>
+        <textarea class="textarea" id="oNotes">${esc(o.notes||'')}</textarea>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="saveOrder('${o.id||''}')">${existing?'Update Order':'Save Order'}</button>
+    </div>
+    `
+  );
+}
+
+function saveOrder(id){
+  const customerId=$('#oCustomer').value;
+  const orderNo=$('#oNo').value.trim();
+  const orderDate=$('#oDate').value;
+  const weight=$('#oWeight').value.trim();
+  const touch=$('#oTouch').value.trim();
+  const ladyRing=$('#oLadyRing').value.trim();
+  const gentRing=$('#oGentRing').value.trim();
+  const advance=$('#oAdvance').value.trim();
+
+  if(!customerId) return toast('Select a customer');
+  if(!orderNo) return toast('Order Number is required');
+  if(!orderDate) return toast('Order Date is required');
+  if(!weight) return toast('Weight is required');
+  if(!touch) return toast('Touch is required');
+  if(!ladyRing) return toast("Lady's Ring Size is required");
+  if(!gentRing) return toast("Gent's Ring Size is required");
+  if(!advance) return toast('Advance Amount is required');
+
+  const obj={
+    id:id||'O'+Date.now(),
+    customerId,
+    orderNo,
+    orderDate,
+    type:$('#oType').value,
+    weight,
+    touch,
+    screw:$('#oScrew').value.trim(),
+    ladyRing,
+    gentRing,
+    huid:$('#oHuid').value,
+    advanceMode:$('#oAdvanceMode').value,
+    advance:Number(advance||0),
+    startDate:$('#oStart').value,
+    deliveryDate:$('#oDelivery').value,
+    status:$('#oStatus').value,
+    notes:$('#oNotes').value.trim()
+  };
+
+  if(id){
+    const i=data.orders.findIndex(o=>o.id===id);
+    if(i!==-1) data.orders[i]=obj;
+  }else{
+    data.orders.push(obj);
+  }
+
+  save();
+  closeModal();
+  layout();
+
+  toast(id?'Order updated':'Order created successfully');
+}
+
+function editOrder(id){
+  openOrder(data.orders.find(o=>o.id===id));
+}
+
+function orderWhatsApp(id){
+  const o=data.orders.find(o=>o.id===id);
+  const c=customer(o.customerId);
+
+  const type=
+    o.status==='Started'||o.status==='Production' ? 'Order Started' :
+    o.status==='Completed' ? 'Order Completed' :
+    o.status==='Ready' ? 'Ready for Delivery' :
+    o.status==='Delivered' ? 'Delivery Update' :
+    'Order Thank You';
+
+  wa(c.phone,msgFor(type,c,o));
+
+  data.messages.push({customerId:c.id,type,date:dateNow(),orderId:id});
+  save();
+
+  toast('WhatsApp opened');
+}
 
 /* =========================================================
    EXHIBITIONS
-   ========================================================= */
+========================================================= */
 
 function exhibitions(){
-
   return `
   <div class="page-head">
-
     <div>
       <div class="eyebrow">Campaigns</div>
       <div class="title">Exhibitions</div>
-
-      <div class="muted">
-        Invite customers, track visits and convert follow-ups into orders.
-      </div>
+      <div class="muted">Invite customers, track visits and convert follow-ups into orders.</div>
     </div>
-
-    <button
-      class="btn primary"
-      onclick="openExhibition()">
-      ➕ New Exhibition
-    </button>
-
+    <button class="btn primary" onclick="openExhibition()">➕ New Exhibition</button>
   </div>
 
   <div class="grid three">
-
     ${
       data.exhibitions.map(e=>`
-
       <div class="card">
-
-        <div class="eyebrow">
-          ${esc(e.date||'-')}
-        </div>
-
+        <div class="eyebrow">${esc(e.date||'-')}</div>
         <h3>${esc(e.name)}</h3>
-
-        <div class="muted">
-          📍 ${esc(e.venue||'-')}
+        <div class="muted">📍 ${esc(e.venue||'-')}</div>
+        <div style="margin-top:15px" class="actions">
+          <button class="btn" onclick="inviteCampaign('${e.id}')">🎪 Invite</button>
+          <button class="btn" onclick="markExhibitionVisit('${e.id}')">👣 Visit</button>
         </div>
-
-        <div
-          style="margin-top:15px"
-          class="actions">
-
-          <button
-            class="btn"
-            onclick="inviteCampaign('${e.id}')">
-            🎪 Invite
-          </button>
-
-          <button
-            class="btn"
-            onclick="markExhibitionVisit('${e.id}')">
-            👣 Visit
-          </button>
-
-        </div>
-
       </div>
-
-      `).join('')||
-
-      `<div
-        class="card empty"
-        style="grid-column:1/-1">
-        No exhibitions yet. Create one to start a campaign.
-      </div>`
+      `).join('')||`<div class="card empty" style="grid-column:1/-1">No exhibitions yet. Create one to start a campaign.</div>`
     }
-
   </div>`;
 }
 
+function openExhibition(existing){
+  const e=existing||{};
+
+  openModal(
+    existing?'Edit Exhibition':'New Exhibition',
+    `
+    <div class="form-grid">
+      <div class="field">
+        <label>Exhibition Name *</label>
+        <input class="input" id="eName" value="${esc(e.name||'')}">
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input class="input" type="date" id="eDate" value="${esc(e.date||'')}">
+      </div>
+      <div class="field full">
+        <label>Venue</label>
+        <input class="input" id="eVenue" value="${esc(e.venue||'')}">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="saveExhibition('${e.id||''}')">Save Exhibition</button>
+    </div>
+    `
+  );
+}
+
+function saveExhibition(id){
+  const name=$('#eName').value.trim();
+  if(!name) return toast('Exhibition name is required');
+
+  const obj={
+    id:id||'E'+Date.now(),
+    name,
+    date:$('#eDate').value,
+    venue:$('#eVenue').value.trim()
+  };
+
+  if(id){
+    data.exhibitions[data.exhibitions.findIndex(e=>e.id===id)]=obj;
+  }else{
+    data.exhibitions.push(obj);
+  }
+
+  save();
+  closeModal();
+  layout();
+  toast('Exhibition saved');
+}
+
+function inviteCampaign(id){
+  const e=data.exhibitions.find(x=>x.id===id);
+
+  openModal(
+    'Exhibition Invite',
+    `
+    <div class="field">
+      <label>Select Customer</label>
+      <select class="select" id="campCustomer">
+        ${data.customers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="field" style="margin-top:12px">
+      <label>Message</label>
+      <textarea class="textarea" id="campMsg" rows="9"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn primary" onclick="sendCampaign('${id}')">🎪 Open WhatsApp</button>
+    </div>
+    `
+  );
+
+  const s=$('#campCustomer');
+  const up=()=>{
+    const c=customer(s.value);
+    $('#campMsg').value=
+`Dear ${c.contactPerson||c.name},
+
+We are pleased to invite you to ${e.name}${e.venue?' at '+e.venue:''}${e.date?' on '+e.date:''}. 🎪
+
+We would be delighted to meet you.
+
+Regards,
+SHREE JI GOLD CREATOR LLP`;
+  };
+
+  s.onchange=up;
+  up();
+}
+
+function sendCampaign(id){
+  const c=customer($('#campCustomer').value);
+  wa(c.phone,$('#campMsg').value);
+
+  data.messages.push({customerId:c.id,type:'Exhibition Invitation',exhibitionId:id,date:dateNow()});
+  save();
+  closeModal();
+}
+
+function markExhibitionVisit(id){
+  toast('Visit tracking is ready — connect each visitor to a customer from the next version.');
+}
 
 /* =========================================================
    REVIEWS
-   ========================================================= */
+========================================================= */
 
 function reviews(){
-
   const avg=data.reviews.length
-    ?
-    (
-      data.reviews.reduce(
-        (s,r)=>s+Number(r.rating||0),
-        0
-      )/data.reviews.length
-    ).toFixed(1)
-    :'0.0';
+    ? (data.reviews.reduce((s,r)=>s+Number(r.rating||0),0)/data.reviews.length).toFixed(1)
+    : '0.0';
 
   return `
   <div class="page-head">
-
     <div>
       <div class="eyebrow">Customer Voice</div>
       <div class="title">Reviews</div>
-
-      <div class="muted">
-        Collect feedback and build a strong customer experience record.
-      </div>
+      <div class="muted">Collect feedback and build a strong customer experience record.</div>
     </div>
-
   </div>
 
-  <div
-    class="grid stats"
-    style="grid-template-columns:repeat(3,1fr)">
-
-    <div class="card">
-      <div class="stat-label">AVERAGE RATING</div>
-      <div class="metric">${avg} ⭐</div>
-    </div>
-
-    <div class="card">
-      <div class="stat-label">TOTAL REVIEWS</div>
-      <div class="metric">${data.reviews.length}</div>
-    </div>
-
-    <div class="card">
-      <div class="stat-label">5-STAR REVIEWS</div>
-      <div class="metric">
-        ${data.reviews.filter(r=>Number(r.rating)===5).length}
-      </div>
-    </div>
-
+  <div class="grid stats" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card"><div class="stat-label">AVERAGE RATING</div><div class="metric">${avg} ⭐</div></div>
+    <div class="card"><div class="stat-label">TOTAL REVIEWS</div><div class="metric">${data.reviews.length}</div></div>
+    <div class="card"><div class="stat-label">5-STAR REVIEWS</div><div class="metric">${data.reviews.filter(r=>Number(r.rating)===5).length}</div></div>
   </div>
 
   <div class="card">
-
-    <div class="section-title">
-      Customer Feedback
-    </div>
-
+    <div class="section-title">Customer Feedback</div>
     <div class="list">
-
       ${
         data.reviews.slice().reverse().map(r=>`
-
         <div class="list-row">
-
-          <div>
-            <b>
-              ${esc(customer(r.customerId)?.name||'Customer')}
-            </b>
-
-            <div class="row-sub">
-              ${esc(r.text||'')}
-            </div>
-          </div>
-
-          <div>
-            ${'⭐'.repeat(Number(r.rating||0))}
-          </div>
-
+          <div><b>${esc(customer(r.customerId)?.name||'Customer')}</b><div class="row-sub">${esc(r.text||'')}</div></div>
+          <div>${'⭐'.repeat(Number(r.rating||0))}</div>
         </div>
-
-        `).join('')||
-
-        '<div class="empty">No reviews recorded yet.</div>'
+        `).join('')||'<div class="empty">No reviews recorded yet.</div>'
       }
-
     </div>
-
   </div>`;
 }
-
 
 /* =========================================================
    REPORTS
-   ========================================================= */
+========================================================= */
 
 function reports(){
-
   const total=data.orders.length;
-
-  const del=data.orders.filter(
-    o=>o.status==='Delivered'
-  ).length;
-
-  const repeat=data.customers.filter(
-    c=>data.orders.filter(
-      o=>o.customerId===c.id
-    ).length>1
-  ).length;
-
-  const value=data.orders.reduce(
-    (s,o)=>s+Number(o.value||0),
-    0
-  );
+  const del=data.orders.filter(o=>o.status==='Delivered').length;
+  const repeat=data.customers.filter(c=>data.orders.filter(o=>o.customerId===c.id).length>1).length;
+  const value=data.orders.reduce((s,o)=>s+Number(o.value||0),0);
 
   return `
   <div class="page-head">
-
     <div>
       <div class="eyebrow">Management Intelligence</div>
       <div class="title">Reports</div>
-
-      <div class="muted">
-        A clean snapshot for owner-level review.
-      </div>
+      <div class="muted">A clean snapshot for owner-level review.</div>
     </div>
-
   </div>
 
   <div class="grid three">
-
+    <div class="card"><div class="stat-label">TOTAL ORDER VALUE</div><div class="metric">${money(value)}</div></div>
     <div class="card">
-      <div class="stat-label">TOTAL ORDER VALUE</div>
-      <div class="metric">${money(value)}</div>
+      <div class="stat-label">DELIVERY SUCCESS</div>
+      <div class="metric">${total?Math.round(del/total*100):0}%</div>
+      <div class="progress" style="margin-top:12px"><span style="width:${total?Math.round(del/total*100):0}%"></span></div>
     </div>
-
-    <div class="card">
-
-      <div class="stat-label">
-        DELIVERY SUCCESS
-      </div>
-
-      <div class="metric">
-        ${total?Math.round(del/total*100):0}%
-      </div>
-
-      <div
-        class="progress"
-        style="margin-top:12px">
-
-        <span
-          style="width:${total?Math.round(del/total*100):0}%">
-        </span>
-
-      </div>
-
-    </div>
-
-    <div class="card">
-
-      <div class="stat-label">
-        REPEAT CUSTOMERS
-      </div>
-
-      <div class="metric">
-        ${repeat}
-      </div>
-
-    </div>
-
+    <div class="card"><div class="stat-label">REPEAT CUSTOMERS</div><div class="metric">${repeat}</div></div>
   </div>
 
-  <div
-    class="grid two"
-    style="margin-top:16px">
-
+  <div class="grid two" style="margin-top:16px">
     <div class="card">
-
-      <div class="section-title">
-        Order Status
-      </div>
-
+      <div class="section-title">Order Status</div>
       ${
-        ['New','Started','Production','Completed','Hallmarking','Ready','Delivered']
-        .map(s=>{
-
-          const n=data.orders.filter(
-            o=>o.status===s
-          ).length;
-
+        ['New','Started','Production','Completed','Hallmarking','Ready','Delivered'].map(s=>{
+          const n=data.orders.filter(o=>o.status===s).length;
           return `
           <div style="margin:13px 0">
-
-            <div class="kpi-bar">
-              <span>${s}</span>
-              <b>${n}</b>
-            </div>
-
-            <div class="progress">
-
-              <span
-                style="width:${
-                  total
-                  ?Math.round(n/total*100)
-                  :0
-                }%">
-              </span>
-
-            </div>
-
+            <div class="kpi-bar"><span>${s}</span><b>${n}</b></div>
+            <div class="progress"><span style="width:${total?Math.round(n/total*100):0}%"></span></div>
           </div>`;
         }).join('')
       }
-
     </div>
 
     <div class="card">
-
-      <div class="section-title">
-        Owner Follow-up Ideas
-      </div>
-
+      <div class="section-title">Owner Follow-up Ideas</div>
       <div class="list">
-
-        <div class="list-row">
-          🎪
-          <span>Exhibition visitors to follow up</span>
-          <b>${data.customers.length}</b>
-        </div>
-
-        <div class="list-row">
-          ⭐
-          <span>Reviews to collect</span>
-          <b>
-            ${data.orders.filter(o=>o.status==='Delivered').length}
-          </b>
-        </div>
-
-        <div class="list-row">
-          🔁
-          <span>Potential repeat customers</span>
-          <b>${repeat}</b>
-        </div>
-
+        <div class="list-row">🎪<span>Exhibition visitors to follow up</span><b>${data.customers.length}</b></div>
+        <div class="list-row">⭐<span>Reviews to collect</span><b>${data.orders.filter(o=>o.status==='Delivered').length}</b></div>
+        <div class="list-row">🔁<span>Potential repeat customers</span><b>${repeat}</b></div>
       </div>
-
     </div>
-
   </div>`;
 }
-
 
 /* =========================================================
    SETTINGS
-   ========================================================= */
+========================================================= */
 
 function settings(){
-
   return `
   <div class="page-head">
-
     <div>
       <div class="eyebrow">Administration</div>
       <div class="title">Settings</div>
-
-      <div class="muted">
-        Company profile, backup and app preferences.
-      </div>
+      <div class="muted">Company profile, backup and app preferences.</div>
     </div>
-
   </div>
 
   <div class="grid two">
-
     <div class="card">
-
-      <div class="section-title">
-        🏢 Company Profile
-      </div>
-
+      <div class="section-title">🏢 Company Profile</div>
       <div class="form-grid">
-
-        <div class="field full">
-
-          <label>Company Name</label>
-
-          <input
-            class="input"
-            id="companyName"
-            value="SHREE JI GOLD CREATOR LLP">
-
-        </div>
-
-        <div class="field">
-
-          <label>App Name</label>
-
-          <input
-            class="input"
-            value="SHREE JI CONNECT"
-            disabled>
-
-        </div>
-
-        <div class="field">
-
-          <label>Currency</label>
-
-          <input
-            class="input"
-            value="INR (₹)"
-            disabled>
-
-        </div>
-
+        <div class="field full"><label>Company Name</label><input class="input" id="companyName" value="SHREE JI GOLD CREATOR LLP"></div>
+        <div class="field"><label>App Name</label><input class="input" value="SHREE JI CONNECT" disabled></div>
+        <div class="field"><label>Currency</label><input class="input" value="INR (₹)" disabled></div>
       </div>
-
       <div class="modal-actions">
-
-        <button
-          class="btn primary"
-          onclick="toast('Company branding saved')">
-          Save Profile
-        </button>
-
+        <button class="btn primary" onclick="toast('Company branding saved')">Save Profile</button>
       </div>
-
     </div>
 
     <div class="card">
-
-      <div class="section-title">
-        💾 Data Backup
-      </div>
-
-      <p class="muted">
-        Export your customer, order, exhibition and review data as a JSON backup.
-      </p>
-
+      <div class="section-title">💾 Data Backup</div>
+      <p class="muted">Export your customer, order, exhibition and review data as a JSON backup.</p>
       <div class="actions">
-
-        <button
-          class="btn primary"
-          onclick="exportData()">
-          Export Backup
-        </button>
-
-        <button
-          class="btn"
-          onclick="importData()">
-          Import Backup
-        </button>
-
-        <button
-          class="btn danger"
-          onclick="resetDemo()">
-          Reset Demo Data
-        </button>
-
+        <button class="btn primary" onclick="exportData()">Export Backup</button>
+        <button class="btn" onclick="importData()">Import Backup</button>
+        <button class="btn danger" onclick="resetDemo()">Reset Demo Data</button>
       </div>
-
     </div>
-
   </div>
 
-  <div class="footer-note">
-    SHREE JI CONNECT • Built for SHREE JI GOLD CREATOR LLP • Data stored on this device in v1
-  </div>`;
+  <div class="footer-note">SHREE JI CONNECT • Built for SHREE JI GOLD CREATOR LLP • Data stored on this device</div>`;
 }
 
-
 /* =========================================================
-   COMMON
-   ========================================================= */
+   COMMON / BACKUP
+========================================================= */
 
 function setView(v){
   view=v;
@@ -1107,1084 +1124,68 @@ function closeModal(){
   $('#modal').classList.add('hidden');
 }
 
-
-/* =========================================================
-   CUSTOMER
-   ========================================================= */
-
-function openCustomer(existing){
-
-  const c=existing||{};
-
-  openModal(
-    existing?'Edit Customer':'Add Customer',
-
-    `
-    <div class="form-grid">
-
-      <div class="field">
-
-        <label>Name *</label>
-
-        <input
-          class="input"
-          id="fName"
-          value="${esc(c.name||'')}">
-
-      </div>
-
-      <div class="field">
-
-        <label>WhatsApp Number *</label>
-
-        <input
-          class="input"
-          id="fPhone"
-          inputmode="tel"
-          value="${esc(c.phone||'')}">
-
-      </div>
-
-      <div class="field">
-
-        <label>Shop / Company</label>
-
-        <input
-          class="input"
-          id="fShop"
-          value="${esc(c.shop||'')}">
-
-      </div>
-
-      <div class="field">
-
-        <label>City</label>
-
-        <input
-          class="input"
-          id="fCity"
-          value="${esc(c.city||'')}">
-
-      </div>
-
-      <div class="field full">
-
-        <label>Notes</label>
-
-        <textarea
-          class="textarea"
-          id="fNotes">${esc(c.notes||'')}</textarea>
-
-      </div>
-
-    </div>
-
-    <div class="modal-actions">
-
-      <button
-        class="btn"
-        onclick="closeModal()">
-        Cancel
-      </button>
-
-      <button
-        class="btn primary"
-        onclick="saveCustomer('${c.id||''}')">
-        Save Customer
-      </button>
-
-    </div>
-    `
-  );
-}
-
-function saveCustomer(id){
-
-  const name=$('#fName').value.trim();
-  const phone=$('#fPhone').value.trim();
-
-  if(!name||!phone)
-    return toast('Name and WhatsApp number are required');
-
-  const obj={
-    id:id||'C'+Date.now().toString().slice(-7),
-    name,
-    phone,
-    shop:$('#fShop').value.trim(),
-    city:$('#fCity').value.trim(),
-    notes:$('#fNotes').value.trim(),
-    created:dateNow()
-  };
-
-  if(id){
-
-    const i=data.customers.findIndex(
-      c=>c.id===id
-    );
-
-    data.customers[i]=obj;
-
-  }else{
-
-    data.customers.push(obj);
-
-  }
-
-  save();
-  closeModal();
-  layout();
-
-  toast(
-    id
-    ?'Customer updated'
-    :'Customer added successfully'
-  );
-}
-
-function deleteCustomer(id){
-
-  if(!confirm('Delete this customer?'))
-    return;
-
-  data.customers=data.customers.filter(
-    c=>c.id!==id
-  );
-
-  data.orders=data.orders.filter(
-    o=>o.customerId!==id
-  );
-
-  save();
-  layout();
-
-  toast('Customer deleted');
-}
-
-function viewCustomer(id){
-
-  const c=customer(id);
-
-  const os=data.orders.filter(
-    o=>o.customerId===id
-  );
-
-  openModal(
-    c.name,
-
-    `
-    <div class="grid two">
-
-      <div class="card">
-
-        <div class="section-title">
-          Customer Details
-        </div>
-
-        <p>
-          <b>WhatsApp:</b>
-          ${esc(c.phone)}
-        </p>
-
-        <p>
-          <b>Shop:</b>
-          ${esc(c.shop||'-')}
-        </p>
-
-        <p>
-          <b>City:</b>
-          ${esc(c.city||'-')}
-        </p>
-
-        <p>
-          <b>Notes:</b>
-          ${esc(c.notes||'-')}
-        </p>
-
-        <div class="actions">
-
-          <button
-            class="btn whatsapp"
-            onclick="quickWhatsApp('${id}')">
-            💬 WhatsApp
-          </button>
-
-          <button
-            class="btn"
-            onclick="openCustomer(customer('${id}'));closeModal()">
-            Edit
-          </button>
-
-        </div>
-
-      </div>
-
-      <div class="card">
-
-        <div class="section-title">
-          📜 Customer Timeline
-        </div>
-
-        <div class="timeline">
-
-          ${
-            os.map(o=>`
-
-            <div class="event">
-
-              <b>${esc(o.status)}</b>
-
-              <div class="row-sub">
-                Order ${esc(o.orderNo)}
-              </div>
-
-              <small>
-                ${esc(o.startDate||o.orderDate||'-')}
-              </small>
-
-            </div>
-
-            `).join('')||
-
-            '<div class="muted">No orders yet.</div>'
-          }
-
-        </div>
-
-      </div>
-
-    </div>
-    `
-  );
-}
-
-function quickWhatsApp(id){
-
-  const c=customer(id);
-
-  wa(
-    c.phone,
-    msgFor('Follow-up',c)
-  );
-
-  data.messages.push({
-    customerId:id,
-    type:'Follow-up',
-    date:dateNow()
-  });
-
-  save();
-
-  toast('WhatsApp opened');
-}
-
-
-/* =========================================================
-   WHATSAPP TEMPLATE
-   ========================================================= */
-
-function openWhatsAppTemplate(type){
-
-  const opts=data.customers.map(c=>
-    `<option value="${c.id}">
-      ${esc(c.name)} — ${esc(c.phone)}
-    </option>`
-  ).join('');
-
-  openModal(
-    type,
-
-    `
-    <div class="field">
-
-      <label>Customer</label>
-
-      <select
-        class="select"
-        id="waCustomer">
-
-        ${opts||'<option>No customers</option>'}
-
-      </select>
-
-    </div>
-
-    <div
-      class="field"
-      style="margin-top:12px">
-
-      <label>Message Preview</label>
-
-      <textarea
-        class="textarea"
-        id="waPreview"
-        rows="12"></textarea>
-
-    </div>
-
-    <div class="modal-actions">
-
-      <button
-        class="btn"
-        onclick="closeModal()">
-        Cancel
-      </button>
-
-      <button
-        class="btn primary"
-        onclick="sendTemplate('${esc(type)}')">
-        💬 Open WhatsApp
-      </button>
-
-    </div>
-    `
-  );
-
-  const s=$('#waCustomer');
-
-  const update=()=>{
-    const c=customer(s.value);
-
-    $('#waPreview').value=
-      msgFor(type,c);
-  };
-
-  s.onchange=update;
-
-  update();
-}
-
-function sendTemplate(type){
-
-  const c=customer(
-    $('#waCustomer').value
-  );
-
-  if(!c)
-    return;
-
-  wa(
-    c.phone,
-    $('#waPreview').value
-  );
-
-  data.messages.push({
-    customerId:c.id,
-    type,
-    date:dateNow()
-  });
-
-  save();
-  closeModal();
-}
-
-
-/* =========================================================
-   NEW ORDER FORM
-   ========================================================= */
-
-function openOrder(existing){
-
-  const o=existing||{};
-
-  const opts=data.customers.map(c=>
-
-    `<option
-      value="${c.id}"
-      ${c.id===o.customerId?'selected':''}>
-
-      ${esc(c.name)} — ${esc(c.phone)}
-
-    </option>`
-
-  ).join('');
-
-  openModal(
-
-    existing
-    ?'Order Edit'
-    :'New Order',
-
-    `
-
-    <div class="form-grid">
-
-
-      <!-- ORDER NUMBER -->
-
-      <div class="field">
-
-        <label>Order Number *</label>
-
-        <input
-          class="input"
-          id="oNo"
-          value="${esc(
-            o.orderNo||
-            'SJ-'+
-            new Date().getFullYear()+
-            '-'+
-            String(data.orders.length+1).padStart(4,'0')
-          )}">
-
-      </div>
-
-
-      <!-- ORDER DATE -->
-
-      <div class="field">
-
-        <label>Order Date *</label>
-
-        <input
-          class="input"
-          type="date"
-          id="oDate"
-          value="${esc(o.orderDate||dateNow())}">
-
-      </div>
-
-
-      <!-- CUSTOMER -->
-
-      <div class="field">
-
-        <label>Customer *</label>
-
-        <select
-          class="select"
-          id="oCustomer">
-
-          ${
-            opts||
-            '<option value="">Add customer first</option>'
-          }
-
-        </select>
-
-      </div>
-
-
-      <!-- TYPE -->
-
-      <div class="field">
-
-        <label>Type</label>
-
-        <select
-          class="select"
-          id="oType">
-
-          <option
-            value="Direct"
-            ${o.type==='Direct'||!o.type?'selected':''}>
-            Direct
-          </option>
-
-          <option
-            value="SM"
-            ${o.type==='SM'?'selected':''}>
-            SM
-          </option>
-
-        </select>
-
-      </div>
-
-
-      <!-- WEIGHT -->
-
-      <div class="field">
-
-        <label>Weight (g) *</label>
-
-        <input
-          class="input"
-          type="number"
-          step="0.001"
-          id="oWeight"
-          value="${esc(o.weight||'')}">
-
-      </div>
-
-
-      <!-- TOUCH -->
-
-      <div class="field">
-
-        <label>Touch *</label>
-
-        <input
-          class="input"
-          id="oTouch"
-          value="${esc(o.touch||'')}">
-
-      </div>
-
-
-
-
-        </select>
-
-      </div>
-
-
-      <!-- NOTES -->
-
-      <div class="field full">
-
-        <label>Notes</label>
-
-        <textarea
-          class="textarea"
-          id="oNotes">${esc(o.notes||'')}</textarea>
-
-      </div>
-
-    </div>
-
-
-    <div class="modal-actions">
-
-      <button
-        class="btn"
-        onclick="closeModal()">
-        Cancel
-      </button>
-
-      <button
-        class="btn primary"
-        onclick="saveOrder('${o.id||''}')">
-
-        ${existing?'Update Order':'Save Order'}
-
-      </button>
-
-    </div>
-
-    `
-  );
-}
-
-
-/* =========================================================
-   SAVE ORDER
-   ========================================================= */
-
-function saveOrder(id){
-
-  const customerId=$('#oCustomer').value;
-  const orderNo=$('#oNo').value.trim();
-  const orderDate=$('#oDate').value;
-  const weight=$('#oWeight').value.trim();
-  const touch=$('#oTouch').value.trim();
-  const ladyRing=$('#oLadyRing').value.trim();
-  const gentRing=$('#oGentRing').value.trim();
-  const advance=$('#oAdvance').value.trim();
-
-
-  if(!customerId)
-    return toast('Select a customer');
-
-  if(!orderNo)
-    return toast('Order Number is required');
-
-  if(!orderDate)
-    return toast('Order Date is required');
-
-  if(!weight)
-    return toast('Weight is required');
-
-  if(!touch)
-    return toast('Touch is required');
-
-  if(!ladyRing)
-    return toast("Lady's Ring Size is required");
-
-  if(!gentRing)
-    return toast("Gent's Ring Size is required");
-
-  if(!advance)
-    return toast('Advance Amount is required');
-
-
-  const obj={
-
-    id:id||'O'+Date.now(),
-
-    customerId,
-
-    orderNo,
-
-    orderDate,
-
-    type:$('#oType').value,
-
-    weight,
-
-    touch,
-
-    screw:$('#oScrew').value.trim(),
-
-    ladyRing,
-
-    gentRing,
-
-    huid:$('#oHuid').value,
-
-    advanceMode:$('#oAdvanceMode').value,
-
-    advance:Number(advance||0),
-
-    startDate:$('#oStart').value,
-
-    deliveryDate:$('#oDelivery').value,
-
-    status:$('#oStatus').value,
-
-    notes:$('#oNotes').value.trim()
-
-  };
-
-
-  if(id){
-
-    const i=data.orders.findIndex(
-      o=>o.id===id
-    );
-
-    if(i!==-1)
-      data.orders[i]=obj;
-
-  }else{
-
-    data.orders.push(obj);
-
-  }
-
-
-  save();
-  closeModal();
-  layout();
-
-  toast(
-    id
-    ?'Order updated'
-    :'Order created successfully'
-  );
-}
-
-
-function editOrder(id){
-
-  openOrder(
-    data.orders.find(o=>o.id===id)
-  );
-
-}
-
-
-function orderWhatsApp(id){
-
-  const o=data.orders.find(
-    o=>o.id===id
-  );
-
-  const c=customer(
-    o.customerId
-  );
-
-  const type=
-    o.status==='Started'||
-    o.status==='Production'
-    ?'Order Started'
-    :
-    o.status==='Completed'
-    ?'Order Completed'
-    :
-    o.status==='Ready'
-    ?'Ready for Delivery'
-    :
-    o.status==='Delivered'
-    ?'Delivery Update'
-    :
-    'Order Thank You';
-
-  wa(
-    c.phone,
-    msgFor(type,c,o)
-  );
-
-  data.messages.push({
-    customerId:c.id,
-    type,
-    date:dateNow(),
-    orderId:id
-  });
-
-  save();
-
-  toast('WhatsApp opened');
-}
-
-
-/* =========================================================
-   EXHIBITION
-   ========================================================= */
-
-function openExhibition(existing){
-
-  const e=existing||{};
-
-  openModal(
-
-    existing
-    ?'Edit Exhibition'
-    :'New Exhibition',
-
-    `
-    <div class="form-grid">
-
-      <div class="field">
-
-        <label>Exhibition Name *</label>
-
-        <input
-          class="input"
-          id="eName"
-          value="${esc(e.name||'')}">
-
-      </div>
-
-      <div class="field">
-
-        <label>Date</label>
-
-        <input
-          class="input"
-          type="date"
-          id="eDate"
-          value="${esc(e.date||'')}">
-
-      </div>
-
-      <div class="field full">
-
-        <label>Venue</label>
-
-        <input
-          class="input"
-          id="eVenue"
-          value="${esc(e.venue||'')}">
-
-      </div>
-
-    </div>
-
-    <div class="modal-actions">
-
-      <button
-        class="btn"
-        onclick="closeModal()">
-        Cancel
-      </button>
-
-      <button
-        class="btn primary"
-        onclick="saveExhibition('${e.id||''}')">
-        Save Exhibition
-      </button>
-
-    </div>
-    `
-  );
-}
-
-function saveExhibition(id){
-
-  const name=$('#eName').value.trim();
-
-  if(!name)
-    return toast('Exhibition name is required');
-
-  const obj={
-    id:id||'E'+Date.now(),
-    name,
-    date:$('#eDate').value,
-    venue:$('#eVenue').value.trim()
-  };
-
-  if(id){
-
-    data.exhibitions[
-      data.exhibitions.findIndex(
-        e=>e.id===id
-      )
-    ]=obj;
-
-  }else{
-
-    data.exhibitions.push(obj);
-
-  }
-
-  save();
-  closeModal();
-  layout();
-
-  toast('Exhibition saved');
-}
-
-function inviteCampaign(id){
-
-  const e=data.exhibitions.find(
-    x=>x.id===id
-  );
-
-  openModal(
-
-    'Exhibition Invite',
-
-    `
-    <div class="field">
-
-      <label>Select Customer</label>
-
-      <select
-        class="select"
-        id="campCustomer">
-
-        ${
-          data.customers.map(c=>
-            `<option value="${c.id}">
-              ${esc(c.name)}
-            </option>`
-          ).join('')
-        }
-
-      </select>
-
-    </div>
-
-    <div
-      class="field"
-      style="margin-top:12px">
-
-      <label>Message</label>
-
-      <textarea
-        class="textarea"
-        id="campMsg"
-        rows="9"></textarea>
-
-    </div>
-
-    <div class="modal-actions">
-
-      <button
-        class="btn primary"
-        onclick="sendCampaign('${id}')">
-        🎪 Open WhatsApp
-      </button>
-
-    </div>
-    `
-  );
-
-  const s=$('#campCustomer');
-
-  const up=()=>{
-
-    const c=customer(
-      s.value
-    );
-
-    $('#campMsg').value=
-`Dear ${c.name},
-
-We are pleased to invite you to ${e.name}${e.venue?' at '+e.venue:''}${e.date?' on '+e.date:''}. 🎪
-
-We would be delighted to meet you.
-
-Regards,
-SHREE JI GOLD CREATOR LLP`;
-
-  };
-
-  s.onchange=up;
-  up();
-}
-
-function sendCampaign(id){
-
-  const c=customer(
-    $('#campCustomer').value
-  );
-
-  wa(
-    c.phone,
-    $('#campMsg').value
-  );
-
-  data.messages.push({
-    customerId:c.id,
-    type:'Exhibition Invitation',
-    exhibitionId:id,
-    date:dateNow()
-  });
-
-  save();
-  closeModal();
-}
-
-function markExhibitionVisit(id){
-
-  toast(
-    'Visit tracking is ready — connect each visitor to a customer from the next version.'
-  );
-
-}
-
-
-/* =========================================================
-   SEARCH / BACKUP
-   ========================================================= */
-
-function filterCustomers(){
-
-  const q=$('#customerSearch')
-    .value
-    .toLowerCase();
-
-  $('#customerRows').innerHTML=
-    customerRows(
-      data.customers.filter(
-        c=>
-          [c.name,c.phone,c.shop,c.city]
-          .join(' ')
-          .toLowerCase()
-          .includes(q)
-      )
-    );
-}
-
 function exportData(){
-
-  const blob=new Blob(
-    [JSON.stringify(data,null,2)],
-    {type:'application/json'}
-  );
-
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');
-
   a.href=URL.createObjectURL(blob);
-
-  a.download=
-    'shree-ji-connect-backup-'+
-    dateNow()+
-    '.json';
-
+  a.download='shree-ji-connect-backup-'+dateNow()+'.json';
   a.click();
-
   URL.revokeObjectURL(a.href);
-
   toast('Backup exported');
 }
 
 function importData(){
-
   const i=document.createElement('input');
-
   i.type='file';
   i.accept='.json';
 
   i.onchange=()=>{
-
     const f=i.files[0];
-
-    if(!f)return;
+    if(!f) return;
 
     const r=new FileReader();
-
     r.onload=()=>{
-
       try{
-
-        data=JSON.parse(
-          r.result
-        );
-
+        data=JSON.parse(r.result);
         save();
         layout();
-
         toast('Backup imported');
-
       }catch{
-
         toast('Invalid backup file');
-
       }
-
     };
-
     r.readAsText(f);
-
   };
 
   i.click();
 }
 
 function resetDemo(){
-
-  if(
-    confirm(
-      'Reset all app data to demo data?'
-    )
-  ){
-
-    data=
-      JSON.parse(
-        JSON.stringify(seed)
-      );
-
+  if(confirm('Reset all app data to demo data?')){
+    data=JSON.parse(JSON.stringify(seed));
     save();
     layout();
-
-    toast(
-      'Demo data restored'
-    );
-
+    toast('Demo data restored');
   }
 }
 
-
 /* =========================================================
    START
-   ========================================================= */
+========================================================= */
 
 $('#modalClose').onclick=closeModal;
 
-$('#modal').addEventListener(
-  'click',
-  e=>{
-    if(e.target.id==='modal')
-      closeModal();
-  }
-);
+$('#modal').addEventListener('click',e=>{
+  if(e.target.id==='modal') closeModal();
+});
 
-$('#menuBtn').onclick=()=>
-  $('#sidebar').classList.toggle('open');
+$('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open');
 
-document.addEventListener(
-  'click',
-  e=>{
-    const b=e.target.closest('.nav-item');
+document.addEventListener('click',e=>{
+  const b=e.target.closest('.nav-item');
+  if(b) setView(b.dataset.view);
+});
 
-    if(b)
-      setView(b.dataset.view);
-  }
-);
-
-$('#notifyBtn').onclick=()=>
-  toast('No urgent notifications');
+$('#notifyBtn').onclick=()=>toast('No urgent notifications');
 
 layout();
